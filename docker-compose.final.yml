@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: llm-chat-backend
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3211
+      - DATABASE_URL=sqlite+aiosqlite:///./data/llm_chat.db
+      - DEBUG=False
+      - ALLOWED_ORIGINS=http://your-server-ip:3212
+    env_file:
+      - ./backend/.env
+    restart: always
+    networks:
+      - llm-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3211/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端构建（仅用于构建）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=
+    container_name: llm-chat-frontend
+    image: llm-chat-platform-frontend:latest
+    profiles:
+      - build
+
+  # Nginx 反向代理 - 包含前端静态文件
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    container_name: llm-chat-nginx
+    ports:
+      - "3212:3212"
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - llm-chat-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3212/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  llm-chat-network:
+    driver: bridge
+
+volumes:
+  backend-data:
+  backend-uploads:
+  backend-logs:

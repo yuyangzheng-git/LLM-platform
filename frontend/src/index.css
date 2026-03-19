@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light theme (default) - Warm & Cozy */
+:root {
+  /* Background colors - Warm cream tones */
+  --color-bg-primary: 254 252 247;
+  --color-bg-secondary: 255 255 255;
+  --color-bg-tertiary: 252 248 243;
+
+  /* Text colors */
+  --color-text-primary: 41 37 36;
+  --color-text-secondary: 120 113 108;
+  --color-text-tertiary: 168 162 158;
+
+  /* Border colors */
+  --color-border-primary: 245 235 225;
+  --color-border-secondary: 237 220 203;
+
+  /* Gradient colors - Warm sunset palette */
+  --color-gradient-start: 251 146 60;
+  --color-gradient-mid: 251 113 133;
+  --color-gradient-end: 244 114 182;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(251, 146, 60, 0.2);
+
+  /* Sidebar colors */
+  --color-sidebar-bg: rgba(255, 255, 255, 0.95);
+  --color-sidebar-hover: 254 249 242;
+
+  /* Message colors - Warm peach/coral */
+  --color-message-user-start: 251 146 60;
+  --color-message-user-mid: 251 113 133;
+  --color-message-user-end: 249 115 22;
+  --color-message-assistant-bg: rgba(255, 255, 255, 0.9);
+
+  /* Code block colors */
+  --color-code-bg: 252 248 243;
+  --color-code-text: 41 37 36;
+
+  /* Accent colors */
+  --color-accent-warm: 251 146 60;
+  --color-accent-soft: 252 211 77;
+}
+
+/* Dark theme - Warm & Cozy */
+[data-theme="dark"] {
+  /* Background colors - Deep warm tones */
+  --color-bg-primary: 28 25 23;
+  --color-bg-secondary: 41 37 36;
+  --color-bg-tertiary: 57 50 48;
+
+  /* Text colors */
+  --color-text-primary: 254 250 245;
+  --color-text-secondary: 214 211 209;
+  --color-text-tertiary: 168 162 158;
+
+  /* Border colors */
+  --color-border-primary: 68 64 60;
+  --color-border-secondary: 87 83 78;
+
+  /* Gradient colors - Golden warm glow */
+  --color-gradient-start: 251 191 36;
+  --color-gradient-mid: 251 146 60;
+  --color-gradient-end: 234 88 12;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(41, 37, 36, 0.85);
+  --glass-border: rgba(251, 191, 36, 0.2);
+
+  /* Sidebar colors */
+  --color-sidebar-bg: rgba(41, 37, 36, 0.95);
+  --color-sidebar-hover: 57 50 48;
+
+  /* Message colors */
+  --color-message-user-start: 251 191 36;
+  --color-message-user-mid: 251 146 60;
+  --color-message-user-end: 234 88 12;
+  --color-message-assistant-bg: rgba(41, 37, 36, 0.9);
+
+  /* Code block colors */
+  --color-code-bg: 57 50 48;
+  --color-code-text: 254 250 245;
+
+  /* Accent colors */
+  --color-accent-warm: 251 191 36;
+  --color-accent-soft: 253 224 71;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: rgb(var(--color-bg-primary));
+  color: rgb(var(--color-text-primary));
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Custom scrollbar - warm theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-bg-tertiary));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-accent-warm) / 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-accent-warm) / 0.6);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Prevent transition on initial load */
+.no-transition * {
+  transition: none !important;
+}

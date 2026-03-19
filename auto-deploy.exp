@@ -1,0 +1,40 @@
+#!/usr/bin/expect -f
+# 自动部署脚本 - 使用expect自动输入密码
+
+set timeout 600
+set password "your_server_password"
+set server "ubuntu@your-server-ip"
+set remote_dir "/opt/llm-chat-platform"
+
+# 传输部署包
+spawn scp llm-chat-complete-fix.tar.gz $server:$remote_dir/
+expect {
+    "password:" { send "$password\r" }
+    "Password:" { send "$password\r" }
+}
+expect eof
+
+# 传输部署脚本
+spawn scp deploy-on-server.sh $server:$remote_dir/
+expect {
+    "password:" { send "$password\r" }
+    "Password:" { send "$password\r" }
+}
+expect eof
+
+# SSH登录并执行部署
+spawn ssh $server
+expect {
+    "password:" { send "$password\r" }
+    "Password:" { send "$password\r" }
+}
+
+expect "$ "
+send "cd $remote_dir\r"
+expect "$ "
+send "chmod +x deploy-on-server.sh\r"
+expect "$ "
+send "./deploy-on-server.sh\r"
+expect "$ "
+send "exit\r"
+expect eof

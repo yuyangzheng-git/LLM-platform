@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: llm-chat-backend
+    ports:
+      - "3211:3211"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+      - ./backend/.env:/app/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3211
+      - DATABASE_URL=sqlite+aiosqlite:///./data/llm_chat.db
+    restart: unless-stopped
+    networks:
+      - llm-chat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3211/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: llm-chat-frontend
+    ports:
+      - "3212:3212"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - llm-chat-network
+    environment:
+      - VITE_API_BASE_URL=http://your-server-ip:3211
+
+  # SearxNG已替换为DuckDuckGo HTML搜索（无需Docker依赖）
+  # 如需使用SearxNG，取消下面注释
+  # searxng:
+  #   image: searxng/searxng:latest
+  #   container_name: llm-chat-searxng
+  #   ports:
+  #     - "8888:8080"
+  #   volumes:
+  #     - ./searxng:/etc/searxng:rw
+  #   environment:
+  #     - SEARXNG_BASE_URL=http://localhost:8888/
+  #   restart: unless-stopped
+  #   networks:
+  #     - llm-chat-network
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+
+networks:
+  llm-chat-network:
+    driver: bridge
+
+volumes:
+  backend-data:
+  backend-uploads:
+  backend-logs:
