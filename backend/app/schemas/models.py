@@ -63,6 +63,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     file_ids: Optional[List[int]] = []
     stream: bool = True
+    enable_tools: bool = True
 
 
 class ChatResponse(BaseModel):

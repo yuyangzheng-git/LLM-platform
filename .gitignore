@@ -25,6 +25,9 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+
+# Experiment outputs (ignored), datasets themselves live in datasets/ and
+# are tracked in version control
 data/
 
 # Logs

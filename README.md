@@ -6,6 +6,10 @@ A modern, full-stack AI chat platform supporting multiple LLM providers with rea
 
 [Features](#features) • [Tech Stack](#tech-stack) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Deployment](#deployment)
 
+---
+
+**Research pitch**: This project is a full-stack LLM platform for streaming chat, file analysis, web search, and tool-augmented reasoning. I built it as a research prototype for studying how users interact with AI systems that combine language models with external tools. See [research.md](research.md) for the research framing and [docs/](docs/) for reproducible demos.
+
 </div>
 
 ## Features
@@ -243,10 +247,11 @@ Once running, visit http://localhost:3212/docs for interactive API documentation
 
 ### Key Endpoints
 
-- `POST /api/chat/send` - Send a message and get streaming response
-- `GET /api/conversations` - List all conversations
-- `POST /api/files/upload` - Upload file attachments
-- `GET /api/models` - List configured LLM models
+- `POST /api/v1/chat/stream` - Send a message and get a streaming response (requires `conversation_id`; `enable_tools` toggles tool use)
+- `POST /api/v1/chat/complete` - Non-streaming chat completion
+- `GET /api/v1/conversations` - List all conversations
+- `POST /api/v1/files/upload` - Upload file attachments
+- `GET /api/v1/models/configs` - List configured LLM models
 - `GET /health` - Health check endpoint
 
 ## Development
@@ -304,6 +309,68 @@ docker-compose up -d
 - Verify `ALLOWED_FILE_TYPES` includes your file type
 - Ensure `uploads/` directory has write permissions
 
+## Testing
+
+Smoke and end-to-end tests live in `backend/tests/`. They use a temporary
+database and upload directory (no dependency on local config) and a fake LLM
+service (no API keys or network calls required).
+
+```bash
+cd backend
+pip install -r requirements.txt pytest
+python -m pytest tests/ -v
+```
+
+Coverage:
+
+- Model-provider configuration shape (`tests/test_config.py`)
+- Tool registry registration and listing (`tests/test_tools.py`)
+- Health, root, models, and OpenAPI endpoints (`tests/test_api.py`)
+- Upload file → create conversation → chat → answer flow, with and without
+  tools; asserts that `enable_tools=False` sends zero tool definitions
+  (`tests/test_chat_tools.py`)
+
+### Experiment harness (requires a running backend + API key)
+
+```bash
+python3 scripts/claim_verification.py --base-url http://localhost:3211
+```
+
+Runs the 10-claim dataset in `datasets/claim_verification_dataset.json`
+(tracked in git) under both tool conditions and saves raw answers + a summary
+CSV. Any failed claim-condition (HTTP error, SSE `error`, missing `done`)
+exits non-zero. See [docs/demo-claim-verification.md](docs/demo-claim-verification.md).
+
+## My Contribution
+
+Solo project (Yu Yang Zheng). What I designed and implemented:
+
+- The FastAPI backend with async SQLAlchemy persistence and encrypted API-key storage
+- The provider abstraction layer (`backend/app/services/llm/`) for OpenAI, Anthropic, and Google
+- The tool registry and executor (`backend/app/tools/`) for web search, scraping, datetime, and location
+- Streaming SSE chat endpoints, conversation management, and file attachments
+- The React/Vite/Tailwind frontend with dark mode and streaming rendering
+- Docker Compose deployments (dev, prod) and Nginx reverse-proxy configuration
+
+What I verified in this repository (with automated checks):
+
+- 25 tests in `backend/tests/` pass, using an isolated temporary database and a
+  fake LLM service (no API keys or network needed)
+- `enable_tools` is threaded through `/api/v1/chat/stream` and `/complete`;
+  a test asserts that `enable_tools=False` sends **zero** tool definitions
+  **and** that the tool executor is never invoked even if the model still
+  returns tool calls (guarded at the execution entry)
+- Both endpoints share one tool-call loop (`app/api/tool_loop.py`): model
+  requests tool → execute → results appended → second model call → answer
+  persisted (tested for stream and complete)
+- End-to-end test: upload file → create conversation → chat → persisted answer
+- The 10-claim dataset (committed in `datasets/claim_verification_dataset.json`)
+  and the `scripts/claim_verification.py` harness run both tool conditions,
+  save raw answers for scoring, and exit non-zero on failed runs (tested with
+  fake SSE error / missing-`done` servers)
+- All documented API payloads in `docs/demo-claim-verification.md` match the
+  implemented schemas (`conversation_id` required, 422 otherwise)
+
 ## Security Considerations
 
 - API keys are encrypted at rest using Fernet encryption
@@ -311,6 +378,13 @@ docker-compose up -d
 - Use strong, unique `ENCRYPTION_KEY` in production
 - Enable HTTPS in production with proper SSL certificates
 - Restrict CORS origins in production
+
+### Privacy Notes (important for research use)
+
+- Prompts and uploaded files are sent to third-party LLM providers (OpenAI, Anthropic, Google). Do not upload personal or confidential data.
+- Use synthetic or de-identified documents for studies; clear `uploads/` between participants.
+- Web search and scraping queries are also sent to external services (DuckDuckGo/SearXNG and target websites).
+- Conversations are stored in the local database; delete or export them per your ethics protocol.
 
 ## Contributing
 

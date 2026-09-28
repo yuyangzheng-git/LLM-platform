@@ -15,8 +15,7 @@ from app.services.llm.factory import LLMServiceFactory
 from app.services.context_manager import ContextManager
 from app.api.models import decrypt_api_key
 from app.tools.registry import tool_registry
-from app.tools.executor import ToolExecutor
-from app.tools.schemas import ToolCall
+from app.api.tool_loop import parse_tool_calls, execute_guarded, append_tool_messages
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,10 +25,15 @@ async def stream_chat_response(
     conversation: Conversation,
     user_message: str,
     file_ids: list,
-    db: AsyncSession
+    db: AsyncSession,
+    enable_tools: bool = True
 ) -> AsyncGenerator[str, None]:
     """
     Stream chat response using SSE with multi-turn tool calling support
+
+    When enable_tools is False, no tool definitions are sent to the model and
+    the tool-execution loop is skipped entirely (used for tool-free control
+    conditions in experiments).
 
     Yields SSE-formatted messages
     """
@@ -87,11 +91,13 @@ async def stream_chat_response(
                     attachment.message_id = user_msg.id
             await db.commit()
 
-        # Get tools if service supports them
+        # Get tools if service supports them (disabled in tool-free conditions)
         tools = None
-        if service.supports_tools():
+        if enable_tools and service.supports_tools():
             tools = tool_registry.get_tools_for_provider(service.get_tools_format())
             logger.info(f"Using {len(tools)} tools for provider {conversation.model_provider}")
+        elif not enable_tools:
+            logger.info(f"Tools disabled for this request (enable_tools=False)")
 
         # Multi-turn tool calling loop
         max_iterations = 5
@@ -107,12 +113,15 @@ async def stream_chat_response(
             current_tool_calls = []
 
             # Stream response from LLM
+            stream_kwargs = {}
+            if tools:
+                stream_kwargs["tools"] = tools
             async for chunk in service.chat_stream(
                 messages=messages,
                 model=conversation.model_name,
                 temperature=conversation.temperature,
                 max_tokens=conversation.max_tokens,
-                tools=tools if tools else None
+                **stream_kwargs
             ):
                 # Handle different chunk types
                 if isinstance(chunk, dict):
@@ -131,26 +140,10 @@ async def stream_chat_response(
                     elif chunk_type == 'tool_calls':
                         # Tool calls received
                         tool_calls = chunk.get('tool_calls', [])
-                        for tool_call in tool_calls:
-                            try:
-                                # Parse arguments if they're strings
-                                args = tool_call['function']['arguments']
-                                if isinstance(args, str):
-                                    args = json.loads(args)
-
-                                tool_call_obj = ToolCall(
-                                    id=tool_call['id'],
-                                    name=tool_call['function']['name'],
-                                    arguments=args
-                                )
-                                current_tool_calls.append(tool_call_obj)
-
-                                # Send tool_call event to frontend
-                                yield f"data: {json.dumps({'type': 'tool_call', 'tool_id': tool_call['id'], 'tool_name': tool_call['function']['name'], 'arguments': args})}\n\n"
-
-                            except json.JSONDecodeError as e:
-                                logger.error(f"Failed to parse tool call arguments: {e}")
-                                yield f"data: {json.dumps({'type': 'error', 'error': f'Invalid tool call arguments: {str(e)}'})}\n\n"
+                        for tool_call in parse_tool_calls(tool_calls):
+                            current_tool_calls.append(tool_call)
+                            # Send tool_call event to frontend
+                            yield f"data: {json.dumps({'type': 'tool_call', 'tool_id': tool_call.id, 'tool_name': tool_call.name, 'arguments': tool_call.arguments})}\n\n"
 
                 else:
                     # Backward compatibility: plain string chunk
@@ -162,9 +155,15 @@ async def stream_chat_response(
                 logger.info("No tool calls in this iteration, exiting loop")
                 break
 
-            # Execute tool calls
+            # Execute tool calls only when tools are enabled (guarded again at
+            # the execution entry: a model may emit tool calls even though no
+            # tool definitions were sent when enable_tools=False)
             logger.info(f"Executing {len(current_tool_calls)} tool calls")
-            tool_results = await ToolExecutor.execute_tool_calls(current_tool_calls)
+            tool_results, executed = await execute_guarded(current_tool_calls, enable_tools)
+
+            if not executed:
+                yield f"data: {json.dumps({'type': 'tool_blocked', 'count': len(current_tool_calls), 'message': 'Tool execution disabled (enable_tools=False)'})}\n\n"
+                break
 
             # Send tool results to frontend and add to messages
             for tool_result in tool_results:
@@ -185,64 +184,9 @@ async def stream_chat_response(
                     }
                 })
 
-            # Add assistant's tool calls to message history
-            if conversation.model_provider == "anthropic":
-                # Anthropic format
-                tool_use_content = []
-                for tc in current_tool_calls:
-                    tool_use_content.append({
-                        "type": "tool_use",
-                        "id": tc.id,
-                        "name": tc.name,
-                        "input": tc.arguments
-                    })
-                messages.append({
-                    "role": "assistant",
-                    "content": tool_use_content
-                })
-
-                # Add tool results as user message
-                tool_result_content = []
-                for tr in tool_results:
-                    result_text = json.dumps(tr.result) if tr.success else tr.error
-                    tool_result_content.append({
-                        "type": "tool_result",
-                        "tool_use_id": tr.tool_id,
-                        "content": result_text
-                    })
-                messages.append({
-                    "role": "user",
-                    "content": tool_result_content
-                })
-
-            else:
-                # OpenAI format
-                tool_calls_openai = []
-                for tc in current_tool_calls:
-                    tool_calls_openai.append({
-                        "id": tc.id,
-                        "type": "function",
-                        "function": {
-                            "name": tc.name,
-                            "arguments": json.dumps(tc.arguments)
-                        }
-                    })
-
-                messages.append({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": tool_calls_openai
-                })
-
-                # Add tool results
-                for tr in tool_results:
-                    result_text = json.dumps(tr.result) if tr.success else tr.error
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tr.tool_id,
-                        "name": tr.name,
-                        "content": result_text
-                    })
+            # Add assistant's tool calls and tool results to message history
+            append_tool_messages(messages, current_tool_calls, tool_results,
+                                 conversation.model_provider)
 
         # Get token usage (approximate for streaming)
         prompt_tokens = context_manager.estimate_token_count(
@@ -310,7 +254,8 @@ async def chat_stream(
             conversation=conversation,
             user_message=request.message,
             file_ids=request.file_ids or [],
-            db=db
+            db=db,
+            enable_tools=request.enable_tools,
         ),
         media_type="text/event-stream",
         headers={
@@ -393,39 +338,99 @@ async def chat_complete(
                     attachment.message_id = user_msg.id
             await db.commit()
 
-        # Get completion
-        response = await service.chat_complete(
-            messages=messages,
-            model=conversation.model_name,
-            temperature=conversation.temperature,
-            max_tokens=conversation.max_tokens,
-        )
+        # Build tools for the completion call (disabled in tool-free conditions)
+        tools = None
+        if request.enable_tools and service.supports_tools():
+            tools = tool_registry.get_tools_for_provider(service.get_tools_format())
 
-        # Save assistant message
+        # Multi-turn tool calling loop (same semantics as the streaming path):
+        # model -> tool calls -> execute (only when enable_tools) -> results
+        # appended -> next model call.
+        max_iterations = 5
+        iteration = 0
+        full_response = ""
+        final_response = None
+        all_tool_calls = []
+        total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+        while iteration < max_iterations:
+            iteration += 1
+            kwargs = {}
+            if tools:
+                kwargs["tools"] = tools
+            response = await service.chat_complete(
+                messages=messages,
+                model=conversation.model_name,
+                temperature=conversation.temperature,
+                max_tokens=conversation.max_tokens,
+                **kwargs,
+            )
+            final_response = response
+            full_response = response.get("content") or ""
+            usage = response.get("usage") or {}
+            for key in total_usage:
+                total_usage[key] += usage.get(key, 0)
+
+            raw_tool_calls = response.get("tool_calls") or []
+            if not raw_tool_calls:
+                break
+
+            current_tool_calls = parse_tool_calls(raw_tool_calls)
+            if not current_tool_calls:
+                break
+
+            tool_results, executed = await execute_guarded(current_tool_calls, request.enable_tools)
+            if not executed:
+                logger.warning("tool calls received but enable_tools=False; not executing")
+                break
+
+            for tr in tool_results:
+                all_tool_calls.append({
+                    'call': {
+                        'id': tr.tool_id,
+                        'name': tr.name,
+                        'arguments': next((tc.arguments for tc in current_tool_calls if tc.id == tr.tool_id), {})
+                    },
+                    'result': {
+                        'success': tr.success,
+                        'result': tr.result,
+                        'error': tr.error
+                    }
+                })
+
+            append_tool_messages(messages, current_tool_calls, tool_results,
+                                 conversation.model_provider)
+
+        # Save assistant message with tool call metadata
+        extra_metadata = {}
+        if all_tool_calls:
+            extra_metadata['tool_calls'] = all_tool_calls
+
         assistant_msg = Message(
             conversation_id=conversation.id,
             role="assistant",
-            content=response["content"],
-            prompt_tokens=response["usage"]["prompt_tokens"],
-            completion_tokens=response["usage"]["completion_tokens"],
-            total_tokens=response["usage"]["total_tokens"],
+            content=full_response,
+            prompt_tokens=total_usage["prompt_tokens"],
+            completion_tokens=total_usage["completion_tokens"],
+            total_tokens=total_usage["total_tokens"],
+            extra_metadata=extra_metadata if extra_metadata else None
         )
         db.add(assistant_msg)
 
         # Update conversation statistics
         conversation.message_count += 2
-        conversation.total_tokens += response["usage"]["total_tokens"]
+        conversation.total_tokens += total_usage["total_tokens"]
 
         await db.commit()
         await db.refresh(assistant_msg)
 
         return ChatResponse(
             message_id=assistant_msg.id,
-            content=response["content"],
-            model=response["model"],
-            prompt_tokens=response["usage"]["prompt_tokens"],
-            completion_tokens=response["usage"]["completion_tokens"],
-            total_tokens=response["usage"]["total_tokens"],
+            content=full_response,
+            model=final_response.get("model", conversation.model_name),
+            prompt_tokens=total_usage["prompt_tokens"],
+            completion_tokens=total_usage["completion_tokens"],
+            total_tokens=total_usage["total_tokens"],
         )
 
     except Exception as e:

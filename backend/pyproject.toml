@@ -2,7 +2,7 @@
 name = "llm-chat-platform"
 version = "1.0.0"
 description = "Multi-model LLM chat platform with streaming support"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+authors = [{name = "Yu Yang Zheng", email = "yuyangzheng@users.noreply.github.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}

@@ -1,0 +1,76 @@
+{
+  "dataset": "claim_verification_dataset",
+  "description": "Ten factual claims with labels and reference URLs for the tool-augmented vs tool-free verification study (see docs/demo-claim-verification.md).",
+  "claims": [
+    {
+      "id": 1,
+      "claim": "The Eiffel Tower was completed in 1889.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/Eiffel_Tower",
+      "note": "Opened 31 March 1889 for the 1889 World's Fair."
+    },
+    {
+      "id": 2,
+      "claim": "Koalas are a species of bear found only in Australia.",
+      "label": "false",
+      "reference_url": "https://en.wikipedia.org/wiki/Koala",
+      "note": "Koalas are marsupials, not bears."
+    },
+    {
+      "id": 3,
+      "claim": "The Great Wall of China is over 20,000 kilometres long.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/Great_Wall_of_China",
+      "note": "Total length including branches is approximately 21,196 km."
+    },
+    {
+      "id": 4,
+      "claim": "The Nile is the longest river in the world.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/Nile",
+      "note": "~6,650 km; the Amazon vs Nile ranking is debated but the standard reference lists the Nile first."
+    },
+    {
+      "id": 5,
+      "claim": "Mount Everest is 8,849 metres above sea level.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/Mount_Everest",
+      "note": "China/Nepal joint measurement 2020: 8,848.86 m."
+    },
+    {
+      "id": 6,
+      "claim": "The first iPhone was released in 2007.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/IPhone_(1st_generation)",
+      "note": "Announced January 2007, released June 2007."
+    },
+    {
+      "id": 7,
+      "claim": "The Pacific Ocean is the largest ocean on Earth.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/Pacific_Ocean",
+      "note": ""
+    },
+    {
+      "id": 8,
+      "claim": "The capital city of Australia is Sydney.",
+      "label": "false",
+      "reference_url": "https://en.wikipedia.org/wiki/Canberra",
+      "note": "The capital is Canberra."
+    },
+    {
+      "id": 9,
+      "claim": "Water boils at 100 degrees Celsius at sea level.",
+      "label": "true",
+      "reference_url": "https://en.wikipedia.org/wiki/Boiling_point",
+      "note": "At standard atmospheric pressure."
+    },
+    {
+      "id": 10,
+      "claim": "The Amazon river is the only river in the world with river dolphins.",
+      "label": "false",
+      "reference_url": "https://en.wikipedia.org/wiki/South_Asian_river_dolphin",
+      "note": "Ganges and Indus river dolphins also exist."
+    }
+  ]
+}

@@ -125,14 +125,30 @@ class AnthropicService(BaseLLMService):
 
             response = await self.client.messages.create(**params)
 
+            text = ""
+            tool_calls = []
+            for block in response.content:
+                if block.type == "text":
+                    text += block.text
+                elif block.type == "tool_use":
+                    tool_calls.append({
+                        "id": block.id,
+                        "type": "function",
+                        "function": {
+                            "name": block.name,
+                            "arguments": json.dumps(block.input),
+                        },
+                    })
+
             return {
-                "content": response.content[0].text,
+                "content": text,
                 "model": response.model,
                 "usage": {
                     "prompt_tokens": response.usage.input_tokens,
                     "completion_tokens": response.usage.output_tokens,
                     "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
-                }
+                },
+                "tool_calls": tool_calls,
             }
 
         except Exception as e:

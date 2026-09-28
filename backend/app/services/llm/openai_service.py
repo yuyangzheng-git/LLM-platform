@@ -118,14 +118,28 @@ class OpenAIService(BaseLLMService):
                 **kwargs
             )
 
+            message = response.choices[0].message
+            tool_calls = []
+            if getattr(message, "tool_calls", None):
+                for tc in message.tool_calls:
+                    tool_calls.append({
+                        "id": tc.id,
+                        "type": getattr(tc, "type", "function"),
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments or "",
+                        },
+                    })
+
             return {
-                "content": response.choices[0].message.content,
+                "content": message.content,
                 "model": response.model,
                 "usage": {
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens,
-                }
+                },
+                "tool_calls": tool_calls,
             }
 
         except Exception as e:
