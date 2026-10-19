@@ -16,7 +16,7 @@ alembic>=1.16.0
 # LLM SDKs
 openai>=1.12.0
 anthropic>=0.18.0
-google-generativeai>=0.3.2
+google-genai>=1.0.0
 
 # File Processing
 pypdf>=4.0.0
