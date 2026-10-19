@@ -12,6 +12,8 @@ from app.utils.pdf_processor import PDFProcessor
 
 logger = logging.getLogger(__name__)
 
+UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1MB
+
 
 class FileHandler:
     """Handler for file upload and processing"""
@@ -46,7 +48,7 @@ class FileHandler:
             return "image"
         elif mime_type == "application/pdf":
             return "pdf"
-        elif mime_type.startswith("text/"):
+        elif mime_type.startswith("text/") or mime_type == "application/json":
             return "text"
         else:
             return "document"
@@ -62,31 +64,39 @@ class FileHandler:
         Returns:
             Tuple of (success, message, file_info_dict)
         """
+        filename = upload_file.filename or ""
+        file_path = None
         try:
-            # Read file content
-            content = await upload_file.read()
-            file_size = len(content)
-
-            # Validate file
-            is_valid, error = FileValidator.validate_file(
-                upload_file.filename,
-                file_size,
-                upload_file.content_type
-            )
-
+            # Validate name and type before reading anything
+            is_valid, error = FileValidator.validate_filename(filename)
+            if is_valid:
+                is_valid, error = FileValidator.validate_file_type(filename, upload_file.content_type)
             if not is_valid:
                 return False, error, None
 
             # Generate unique filename
-            stored_filename = FileHandler.generate_unique_filename(upload_file.filename)
+            stored_filename = FileHandler.generate_unique_filename(filename)
             file_path = os.path.join(settings.UPLOAD_DIR, stored_filename)
 
-            # Save file
+            # Stream to disk in chunks so large uploads never sit in memory
+            file_size = 0
             async with aiofiles.open(file_path, "wb") as f:
-                await f.write(content)
+                while chunk := await upload_file.read(UPLOAD_CHUNK_SIZE):
+                    file_size += len(chunk)
+                    if file_size > settings.MAX_FILE_SIZE:
+                        break
+                    await f.write(chunk)
+
+            is_valid, error = FileValidator.validate_file_size(file_size)
+            if not is_valid:
+                os.remove(file_path)
+                return False, error, None
+
+            # Trust the extension, not the client-supplied Content-Type
+            mime_type = FileValidator.guess_mime_type(filename)
 
             # Determine file type
-            file_type = FileHandler.get_file_type(upload_file.content_type)
+            file_type = FileHandler.get_file_type(mime_type)
 
             # Process file based on type
             processed_content = None
@@ -101,15 +111,15 @@ class FileHandler:
 
             elif file_type == "text":
                 # Read text content
-                async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                async with aiofiles.open(file_path, "r", encoding="utf-8", errors="replace") as f:
                     processed_content = await f.read()
 
             file_info = {
-                "original_filename": upload_file.filename,
+                "original_filename": filename,
                 "stored_filename": stored_filename,
                 "file_path": file_path,
                 "file_type": file_type,
-                "mime_type": upload_file.content_type,
+                "mime_type": mime_type,
                 "file_size": file_size,
                 "processed_content": processed_content,
             }
@@ -117,8 +127,10 @@ class FileHandler:
             return True, "File uploaded successfully", file_info
 
         except Exception as e:
-            logger.error(f"File upload error: {str(e)}")
-            return False, f"File upload failed: {str(e)}", None
+            logger.exception(f"File upload error: {str(e)}")
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
+            return False, "File upload failed", None
 
     @staticmethod
     async def delete_file(file_path: str) -> bool:
