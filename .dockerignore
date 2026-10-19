@@ -54,6 +54,7 @@ build/
 *.sh
 !deploy.sh
 
-# Environment
-.env.local
-.env.*.local
+# Environment (never bake secrets into images; mount at runtime instead)
+.env
+.env.*
+*.env

@@ -20,6 +20,9 @@ from app.api.tool_loop import parse_tool_calls, execute_guarded, append_tool_mes
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Shown to clients instead of raw exception text; details go to the server log.
+PUBLIC_ERROR_MESSAGE = "生成回复时出错，请稍后重试或检查服务器日志"
+
 
 async def stream_chat_response(
     conversation: Conversation,
@@ -226,10 +229,8 @@ async def stream_chat_response(
         yield f"data: {json.dumps({'type': 'done', 'message_id': assistant_msg.id, 'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens, 'total': total_tokens}})}\n\n"
 
     except Exception as e:
-        logger.error(f"Streaming error: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
+        logger.exception(f"Streaming error: {str(e)}")
+        yield f"data: {json.dumps({'error': PUBLIC_ERROR_MESSAGE, 'type': 'error'})}\n\n"
 
 
 @router.post("/stream")
@@ -433,6 +434,8 @@ async def chat_complete(
             total_tokens=total_usage["total_tokens"],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Chat completion error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Chat completion error: {str(e)}")
+        raise HTTPException(status_code=500, detail=PUBLIC_ERROR_MESSAGE)

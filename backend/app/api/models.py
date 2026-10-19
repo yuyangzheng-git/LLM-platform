@@ -219,11 +219,11 @@ async def test_model_connection(
         }
 
     except Exception as e:
-        logger.error(f"Connection test error: {str(e)}")
+        logger.exception(f"Connection test error: {str(e)}")
         return {
             "provider": provider,
             "connected": False,
-            "message": str(e)
+            "message": f"Connection failed ({type(e).__name__}), see server logs"
         }
 
 
