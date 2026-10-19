@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, func
 from typing import List
 
 from app.database import get_db
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.file_attachment import FileAttachment
 from app.schemas.models import (
     ConversationCreate,
     ConversationUpdate,
@@ -139,6 +140,17 @@ async def get_conversation_messages(
     result = await db.execute(query)
     messages = result.scalars().all()
 
+    # Attachment counts per message, so the UI can show "N files attached"
+    file_counts = {}
+    message_ids = [msg.id for msg in messages]
+    if message_ids:
+        count_query = (
+            select(FileAttachment.message_id, func.count(FileAttachment.id))
+            .where(FileAttachment.message_id.in_(message_ids))
+            .group_by(FileAttachment.message_id)
+        )
+        file_counts = dict((await db.execute(count_query)).all())
+
     return [
         {
             "id": msg.id,
@@ -148,6 +160,35 @@ async def get_conversation_messages(
             "completion_tokens": msg.completion_tokens,
             "total_tokens": msg.total_tokens,
             "created_at": msg.created_at,
+            "fileCount": file_counts.get(msg.id, 0),
+            **_metadata_for_ui(msg.extra_metadata),
         }
         for msg in messages
     ]
+
+
+def _metadata_for_ui(metadata) -> dict:
+    """
+    Tool calls and reasoning saved on an assistant message, reshaped to the
+    same form the frontend builds from live stream events.
+    """
+    if not metadata:
+        return {}
+    out = {}
+    if metadata.get("reasoning"):
+        out["reasoning"] = metadata["reasoning"]
+    tool_calls = []
+    for entry in metadata.get("tool_calls") or []:
+        call = entry.get("call", {})
+        result = entry.get("result", {})
+        tool_calls.append({
+            "id": call.get("id"),
+            "name": call.get("name"),
+            "arguments": call.get("arguments", {}),
+            "status": "completed" if result.get("success") else "error",
+            "result": result.get("result"),
+            "error": result.get("error"),
+        })
+    if tool_calls:
+        out["tool_calls"] = tool_calls
+    return out

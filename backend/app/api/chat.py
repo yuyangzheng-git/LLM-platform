@@ -22,6 +22,7 @@ router = APIRouter()
 
 # Shown to clients instead of raw exception text; details go to the server log.
 PUBLIC_ERROR_MESSAGE = "生成回复时出错，请稍后重试或检查服务器日志"
+MODEL_NOT_CONFIGURED_MESSAGE = "模型服务（{provider}）尚未配置或已停用，请先在服务器上完成模型配置"
 
 
 async def stream_chat_response(
@@ -49,7 +50,7 @@ async def stream_chat_response(
         model_config = result.scalar_one_or_none()
 
         if not model_config or not model_config.enabled:
-            yield f"data: {json.dumps({'error': 'Model configuration not found or disabled'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'error': MODEL_NOT_CONFIGURED_MESSAGE.format(provider=conversation.model_provider)})}\n\n"
             return
 
         # Decrypt API key
@@ -206,6 +207,8 @@ async def stream_chat_response(
         extra_metadata = {}
         if all_tool_calls:
             extra_metadata['tool_calls'] = all_tool_calls
+        if reasoning_content:
+            extra_metadata['reasoning'] = reasoning_content
 
         assistant_msg = Message(
             conversation_id=conversation.id,
