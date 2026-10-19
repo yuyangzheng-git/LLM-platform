@@ -1,433 +1,350 @@
-# LLM Chat Platform
+# Zachary's LLM — a tool-augmented LLM chat platform
 
-<div align="center">
+[![Backend tests](https://github.com/yuyangzheng-git/LLM-platform/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/yuyangzheng-git/LLM-platform/actions/workflows/backend-tests.yml)
+[![Frontend checks](https://github.com/yuyangzheng-git/LLM-platform/actions/workflows/frontend-checks.yml/badge.svg)](https://github.com/yuyangzheng-git/LLM-platform/actions/workflows/frontend-checks.yml)
 
-A modern, full-stack AI chat platform supporting multiple LLM providers with real-time streaming, file attachments, and tool calling capabilities.
+**English** · [简体中文](README.zh-CN.md)
 
-[Features](#features) • [Tech Stack](#tech-stack) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Deployment](#deployment)
+A full-stack platform for streaming chat with multiple LLM providers, file
+analysis, web search and tool calling, plus image and video generation. I
+built it as a research prototype for studying how people work with AI systems
+that combine language models with external tools — in particular, whether
+tool use helps users **verify claims** against documents and the web.
+
+- **Backend**: FastAPI · async SQLAlchemy · Alembic · Python 3.12
+- **Frontend**: React 18 · Vite 5 · Tailwind CSS 3 (works on phones, installable to the home screen)
+- **Providers**: OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible API
 
 ---
 
-**Research pitch**: This project is a full-stack LLM platform for streaming chat, file analysis, web search, and tool-augmented reasoning. I built it as a research prototype for studying how users interact with AI systems that combine language models with external tools. See [research.md](research.md) for the research framing and [docs/](docs/) for reproducible demos.
+## Contents
 
-</div>
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [API](#api)
+- [Research use: claim verification](#research-use-claim-verification)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Security and privacy](#security-and-privacy)
+- [Troubleshooting](#troubleshooting)
+- [My contribution](#my-contribution)
 
 ## Features
 
-### Core Capabilities
-- **Multi-Provider Support** - Seamlessly switch between OpenAI, Anthropic (Claude), and Google (Gemini) models
-- **Real-time Streaming** - Server-Sent Events (SSE) for smooth, responsive chat experience
-- **File Attachments** - Support for images, PDFs, and Office documents with intelligent processing
-- **Conversation Management** - Persistent chat history with SQLite/PostgreSQL backend
-- **Dark Mode** - Beautiful, responsive UI with dark/light theme support
+**Chat**
+- Real-time streaming over Server-Sent Events, with a stop button that keeps the partial reply
+- Multi-turn tool calling: the model can call a tool, read the result and continue (up to 5 rounds)
+- Reasoning ("thinking") and tool calls are shown live and restored when a conversation is reopened
+- Persistent conversations (SQLite by default, PostgreSQL in production); the open conversation is kept in the URL (`?c=<id>`)
+- File attachments: images (sent to vision models), PDF text extraction, plain-text formats
 
-### AI Tools & Capabilities
-- **Web Search** - Integrated DuckDuckGo search for real-time information
-- **Web Scraping** - Extract and analyze content from websites
-- **Date/Time Queries** - Timezone-aware date and time information
-- **Location Services** - IP-based geolocation lookup
+**Tools available to the model**
 
-### Developer Experience
-- **API Documentation** - Auto-generated OpenAPI/Swagger docs
-- **Docker Support** - One-command deployment with Docker Compose
-- **Environment Configs** - Separate dev/prod configurations
-- **Extensible Architecture** - Easy to add new LLM providers and tools
+| Tool | What it does | External service |
+|---|---|---|
+| `web_search` | Web search | DuckDuckGo (via `ddgs`) |
+| `analyze_website` | Fetch a page and extract title, text, links and images | The target site (internal/private addresses are blocked) |
+| `get_current_datetime` | Current date and time in a time zone | none |
+| `geocode_address` / `reverse_geocode` | Address ↔ coordinates | OpenStreetMap Nominatim |
 
-## Tech Stack
+**Generation**
+- Image generation (e.g. DALL·E 3) and video generation through the configured OpenAI-compatible endpoint
 
-### Backend
-- **FastAPI** - Modern, high-performance Python web framework
-- **SQLAlchemy** - Async ORM with SQLite/PostgreSQL support
-- **Pydantic** - Data validation and settings management
-- **Python 3.11+** - Latest Python features
+**Interface**
+- Painted "Roots & Roads" theme with light and dark (dusk) modes
+- Phone support: keyboard-aware layout, safe-area insets for notches, 44px touch targets, swipe-to-close history drawer, add to home screen
 
-### Frontend
-- **React 18** - Modern UI library with hooks
-- **Vite** - Lightning-fast build tool
-- **TailwindCSS** - Utility-first CSS framework
-- **Zustand** - Lightweight state management
-- **React Markdown** - Rich text rendering with syntax highlighting
+## Quick start
 
-### Infrastructure
-- **Docker & Docker Compose** - Containerized deployment
-- **Nginx** - Reverse proxy and static file serving
-- **PostgreSQL** - Production-ready database (optional)
+### Option 1: Docker
 
-## Quick Start
-
-### Prerequisites
-- Docker and Docker Compose installed
-- OR Node.js 18+ and Python 3.11+ for local development
-
-### Option 1: Docker Deployment (Recommended)
-
-1. Clone the repository:
 ```bash
 git clone https://github.com/yuyangzheng-git/LLM-platform.git
 cd LLM-platform
+cp backend/.env.example backend/.env
 ```
 
-2. Configure environment variables:
+Generate an encryption key and put it in `backend/.env` as `ENCRYPTION_KEY=...`
+(it encrypts the provider API keys you save; without it saved keys cannot be
+read back after a restart). This needs only the Python standard library:
+
+```bash
+python3 -c "import base64, secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
+```
+
+Then start the stack:
+
+```bash
+docker compose up -d
+```
+
+- App: http://localhost:3212
+- Backend health check: http://localhost:3211/health
+
+### Option 2: Local development
+
+Backend (Python 3.12):
+
 ```bash
 cd backend
-cp .env.example .env
-# Edit .env and add your API keys
+python3.12 -m venv venv && source venv/bin/activate
+pip install -r requirements.lock
+cp .env.example .env   # then set ENCRYPTION_KEY (python generate_key.py)
+uvicorn app.main:app --reload --port 3211
 ```
 
-3. Start all services:
-```bash
-docker-compose up -d
-```
+Frontend (Node 22):
 
-4. Access the application:
-- Frontend: http://localhost:3212
-- API Docs: http://localhost:3212/docs
-- Health Check: http://localhost:3212/health
-
-### Option 2: Local Development
-
-#### Backend Setup
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Generate encryption key
-python generate_key.py
-
-# Configure .env file
-cp .env.example .env
-# Edit .env with your API keys and encryption key
-
-# Run backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 3211
-```
-
-#### Frontend Setup
 ```bash
 cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
+npm ci
 npm run dev
 ```
 
-Access at http://localhost:3212
+Open http://localhost:3212. The database schema is created and migrated
+automatically when the backend starts.
+
+### Add a model provider
+
+There is no settings page yet: providers are configured through the API. The
+key is stored encrypted in the database.
+
+```bash
+curl -X POST http://localhost:3211/api/v1/models/configs \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "api_key": "sk-...", "default_model": "gpt-4o-mini", "enabled": true}'
+```
+
+`provider` is one of `openai`, `anthropic`, `gemini` or `generic`. For an
+OpenAI-compatible gateway, add `"api_base_url": "https://your-gateway/v1"`.
+New chats from the web UI are created with the `openai` provider, so pointing
+that provider at a gateway that serves every model lets you use all models in
+the model picker.
 
 ## Configuration
 
-### Environment Variables
+Backend settings are read from environment variables or `backend/.env`.
 
-#### Backend (.env)
-```bash
-# Application
-APP_NAME=LLM Chat Platform
-DEBUG=True
-HOST=0.0.0.0
-PORT=3211
+| Variable | Default | Notes |
+|---|---|---|
+| `ENCRYPTION_KEY` | *(empty)* | **Required.** Fernet key for stored API keys (`python backend/generate_key.py`) |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/llm_chat.db` | Use `postgresql+asyncpg://user:pass@host:5432/db` for PostgreSQL |
+| `ALLOWED_ORIGINS` | `http://localhost:3212,http://127.0.0.1:3212` | Comma-separated CORS origins |
+| `DEBUG` | `False` | `True` also serves interactive API docs at `/docs` |
+| `UPLOAD_DIR` | `./uploads` | Where uploaded files are stored |
+| `MAX_FILE_SIZE` | `104857600` (100 MB) | Per-file upload limit in bytes |
+| `LOG_LEVEL` | `INFO` | |
 
-# Database
-DATABASE_URL=sqlite+aiosqlite:///./data/llm_chat.db
+Provider API keys are **not** read from the environment: add them through the
+API as shown above. `.env.example` still lists `OPENAI_API_KEY` and similar,
+but the backend ignores them.
 
-# CORS
-ALLOWED_ORIGINS=http://localhost:3212
+Frontend: `VITE_API_BASE_URL` is read **at build time**. Leave it empty in
+Docker (the frontend's nginx proxies `/api` to the backend); the dev server
+defaults to `http://localhost:3211`.
 
-# File Upload
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=10485760  # 10MB
-ALLOWED_FILE_TYPES=image/png,image/jpeg,application/pdf,...
-
-# Encryption (generate with: python backend/generate_key.py)
-ENCRYPTION_KEY=your_generated_key_here
-
-# LLM API Keys
-OPENAI_API_KEY=sk-...
-OPENAI_BASE_URL=https://api.openai.com/v1
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_API_KEY=...
-```
-
-### Supported Models
-
-#### OpenAI
-- GPT-4, GPT-4 Turbo
-- GPT-3.5 Turbo
-- GPT-4o, GPT-4o Mini
-
-#### Anthropic
-- Claude 3.5 Sonnet
-- Claude 3 Opus
-- Claude 3 Haiku
-
-#### Google
-- Gemini 1.5 Pro
-- Gemini 1.5 Flash
-
-## Deployment
-
-### Production Deployment with Docker
-
-1. Update production configuration:
-```bash
-# Edit .env.production
-vim .env.production
-```
-
-2. Use production compose file:
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-3. Configure Nginx (if using external reverse proxy):
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:3212;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-    }
-}
-```
-
-### Database Migration (SQLite to PostgreSQL)
-
-For production, use PostgreSQL:
-
-```bash
-# Update DATABASE_URL in .env.production
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/llmchat
-
-# The database will be auto-initialized on first run
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Schema Migrations (Alembic)
-
-The backend applies pending [Alembic](https://alembic.sqlalchemy.org/)
-migrations from `backend/migrations/` on startup. A database created by an
-older version (before migrations existed) is detected and adopted
-automatically, so no manual step is needed when upgrading.
-
-After changing a model in `backend/app/models/`, generate a migration:
-
-```bash
-cd backend
-alembic revision --autogenerate -m "describe the change"
-```
-
-Review the generated file before committing it.
-
-### Dependencies
-
-`backend/requirements.txt` lists direct dependencies with minimum versions;
-`backend/requirements.lock` pins every package and is what Docker and CI
-install. After editing `requirements.txt`, regenerate the lock with
-[uv](https://docs.astral.sh/uv/):
-
-```bash
-cd backend
-uv pip compile requirements.txt --universal --python-version 3.12 -o requirements.lock
-```
-
-## Project Structure
+## Architecture
 
 ```
-llm-chat-platform/
-├── backend/
-│   ├── app/
-│   │   ├── api/          # API endpoints
-│   │   ├── models/       # Database models
-│   │   ├── schemas/      # Pydantic schemas
-│   │   ├── services/     # Business logic
-│   │   │   └── llm/      # LLM provider integrations
-│   │   ├── tools/        # AI tools (search, scrape, etc.)
-│   │   └── utils/        # Utilities
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── hooks/        # Custom hooks
-│   │   ├── services/     # API clients
-│   │   └── config/       # Model configurations
-│   ├── Dockerfile
-│   └── package.json
-├── nginx/                # Nginx configuration
-├── docker-compose.yml    # Development
-└── docker-compose.prod.yml # Production
+Browser (React)                 FastAPI backend                         External
+───────────────                 ───────────────                         ────────
+Chat UI ── POST /chat/stream ─▶ chat.py ─▶ ContextManager (history + files)
+          ◀── SSE events ────── │        ─▶ LLMServiceFactory ─────────▶ OpenAI / Anthropic /
+                                │             (openai, anthropic,          Gemini / gateway
+                                │              gemini, generic)
+                                └─ tool loop ─▶ ToolRegistry/Executor ──▶ DuckDuckGo, Nominatim,
+                                                                          web pages (SSRF-guarded)
+                                SQLAlchemy ─▶ SQLite / PostgreSQL (Alembic migrations)
 ```
 
-## API Documentation
+```
+backend/
+  app/api/            chat (SSE + tool loop), conversations, files, models, generation
+  app/services/llm/   one class per provider behind a common interface
+  app/services/       context building, file handling
+  app/tools/          tool definitions, registry, executor
+  app/utils/          URL guard (SSRF), file validation, PDF/image processing
+  migrations/         Alembic revisions
+  tests/              pytest suite (temporary DB, fake LLM — no keys or network)
+frontend/
+  src/components/     unified (chat), generation (image/video), common
+  src/services/       API clients (SSE parsing in chatAPI.js)
+  public/             background painting, icons, web manifest
+datasets/             claim-verification dataset (tracked)
+scripts/              claim_verification.py experiment harness
+```
 
-Interactive API docs (`/docs`, `/openapi.json`) are only served by the backend
-when `DEBUG=true`. Run the backend locally in debug mode and visit
+## API
+
+All endpoints are under `/api/v1`. Full schemas: run with `DEBUG=True` and open
 http://localhost:3211/docs.
 
-### Key Endpoints
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/chat/stream` | Send a message, stream the reply (SSE) |
+| `POST` | `/chat/complete` | Same, non-streaming |
+| `GET` `POST` | `/conversations` | List / create conversations |
+| `GET` `PUT` `DELETE` | `/conversations/{id}` | Read / update / delete one |
+| `GET` | `/conversations/{id}/messages` | History, including tool calls, reasoning and attachment counts |
+| `POST` | `/files/upload`, `/files/upload/batch` | Upload attachments |
+| `GET` `POST` | `/models/configs` | List / add provider configurations |
+| `GET` `PUT` `DELETE` | `/models/configs/{provider}` | Manage one provider |
+| `POST` | `/models/test/{provider}` | Test a provider's credentials |
+| `POST` | `/generation/image`, `/generation/video` | Image / video generation |
+| `GET` | `/health` | Health check (no prefix) |
 
-- `POST /api/v1/chat/stream` - Send a message and get a streaming response (requires `conversation_id`; `enable_tools` toggles tool use)
-- `POST /api/v1/chat/complete` - Non-streaming chat completion
-- `GET /api/v1/conversations` - List all conversations
-- `POST /api/v1/files/upload` - Upload file attachments
-- `GET /api/v1/models/configs` - List configured LLM models
-- `GET /health` - Health check endpoint
+A chat request needs an existing conversation:
+
+```json
+{ "conversation_id": 1, "message": "Hello", "file_ids": [], "enable_tools": true }
+```
+
+The stream sends `data: {...}` events with a `type` of `chunk`, `reasoning`,
+`tool_call`, `tool_result`, `tool_blocked`, `error` or `done` (the last one
+carries the saved message id and token usage).
+
+## Research use: claim verification
+
+**Question.** Can tool-augmented LLMs help users verify information and
+synthesise evidence from documents and the web?
+
+1. Do answers with tools (web search, page analysis, file context) contain fewer unsupported claims than tool-free answers?
+2. How does citation quality change when the model has to ground claims in retrieved sources?
+3. What latency and token cost does tool use add, and when is it worth it?
+
+**Design.** Each claim is asked twice with the same model, temperature, prompt
+and conversation settings; the only difference is `enable_tools`. With
+`enable_tools: false` the backend sends **no** tool definitions to the model
+and refuses to execute any tool call it still returns (covered by
+`backend/tests/test_chat_tools.py`).
+
+**Run it.** `datasets/claim_verification_dataset.json` holds 10 labelled
+claims with reference URLs. With the platform running and a provider
+configured:
+
+```bash
+python3 scripts/claim_verification.py --base-url http://localhost:3211 \
+  --provider openai --model gpt-4o-mini --temperature 0
+```
+
+Raw answers go to `data/claim_verification_outputs/tools_on|tools_off/` and a
+summary (tool-call counts, tokens, elapsed time) to
+`data/claim_verification_summary.csv`. Any HTTP error, SSE `error` event or
+stream without `done` marks that run as failed and the script exits non-zero.
+
+**Metrics.** Factuality (human-judged against the reference), citation
+presence and source reliability, coverage of claims checked, latency, token
+cost, and the number of follow-up prompts needed.
+
+**Limitations.** Search results can be stale or incomplete; some pages cannot
+be read (JavaScript-heavy or paywalled); a citation is not proof of
+verification; the pilot dataset is small and not statistically conclusive.
+
+**Before running a study with people.** Use synthetic or de-identified
+documents, clear `uploads/` between participants, and tell participants that
+prompts, files and search queries are sent to third-party services.
 
 ## Development
 
-### Adding a New LLM Provider
+```bash
+# Backend tests (53): temporary database, fake LLM, no API keys or network
+cd backend && pip install -r requirements.lock pytest pytest-asyncio && python -m pytest
 
-1. Create provider service in `backend/app/services/llm/`:
-```python
-class NewProviderService(BaseLLMService):
-    async def generate_response(self, messages, **kwargs):
-        # Implementation
-        pass
+# Frontend: lint, unit tests (Vitest), production build
+cd frontend && npm ci && npm run lint && npm test && npm run build
 ```
 
-2. Register in factory (`backend/app/services/llm/factory.py`)
+GitHub Actions runs both on every pull request and on pushes to `main`
+(`.github/workflows/`).
 
-3. Add model config to frontend (`frontend/src/config/models.js`)
+**Database changes.** After editing a model in `backend/app/models/`:
 
-### Adding a New Tool
-
-1. Create tool in `backend/app/tools/`:
-```python
-@tool_registry.register("tool_name")
-class NewTool:
-    def execute(self, **kwargs):
-        # Implementation
-        pass
+```bash
+cd backend && alembic revision --autogenerate -m "describe the change"
 ```
 
-2. Tool is automatically available to all LLM providers
+Review the generated file in `migrations/versions/` before committing. Pending
+migrations run automatically on startup; databases created before Alembic was
+introduced are adopted automatically.
+
+**Dependencies.** `backend/requirements.txt` lists direct dependencies;
+`backend/requirements.lock` pins everything and is what Docker and CI install.
+After changing `requirements.txt`:
+
+```bash
+cd backend && uv pip compile requirements.txt --universal --python-version 3.12 -o requirements.lock
+```
+
+**Adding a provider.** Implement `BaseLLMService` in
+`backend/app/services/llm/` (`chat_stream`, `chat_complete`,
+`test_connection`, `get_available_models`) and register it in `factory.py`.
+
+**Adding a tool.** Write an async function in `backend/app/tools/`, describe
+its parameters with `ToolDefinition`, register it with `tool_registry`, and call
+the register function from the app's startup in `app/main.py`.
+
+## Deployment
+
+`docker-compose.yml` runs the backend (port 3211) and the frontend (nginx,
+port 3212, proxying `/api`); data, uploads and logs are kept in
+`backend/data`, `backend/uploads` and `backend/logs`.
+
+`docker-compose.prod.yml` adds PostgreSQL (data in the `postgres-data` volume)
+and a front nginx on port 3212. Before using it, edit its `ALLOWED_ORIGINS`
+(currently a placeholder) and set `DB_PASSWORD` in the environment — otherwise
+the database uses the default password written in the file.
+
+For a public deployment:
+- put HTTPS in front (e.g. a reverse proxy with a certificate);
+- set `ALLOWED_ORIGINS` to your real domain and keep `DEBUG=False`;
+- set a strong `ENCRYPTION_KEY` and back it up — losing it makes stored API keys unreadable;
+- **restrict access** — see the next section.
+
+## Security and privacy
+
+- **There is no user authentication yet.** Anyone who can reach the server can
+  read conversations, upload files and spend the configured API credit. Run it
+  on a private network, behind a VPN, or behind an authenticating proxy until
+  login is added.
+- Provider API keys are encrypted at rest with Fernet; never commit `.env`.
+- The page-analysis tool refuses loopback, private, link-local and other
+  non-public addresses, re-checking every redirect, to prevent SSRF.
+- Errors returned to clients are generic; details go to the server log.
+- Uploads are capped, streamed to disk, and typed by extension; SVG is not accepted.
+- Prompts, uploaded files and search queries are sent to third-party services
+  (the LLM providers, DuckDuckGo, Nominatim and the pages being analysed).
+  Conversations are stored in the database until deleted.
 
 ## Troubleshooting
 
-### Common Issues
+| Symptom | Fix |
+|---|---|
+| Reply says the model service is not configured | Add a provider with `POST /api/v1/models/configs` (see [Quick start](#add-a-model-provider)) |
+| Saved API keys stop working after a restart | `ENCRYPTION_KEY` was empty or changed; set a fixed key and re-add the providers |
+| Frontend loads but API calls fail (CORS) | Add the frontend's origin to `ALLOWED_ORIGINS` |
+| `/docs` returns 404 | Interactive docs are only served with `DEBUG=True` |
+| Port 3211 or 3212 already in use | `lsof -i :3211`, stop that process or change the port mapping in `docker-compose.yml` |
 
-**Port already in use**
-```bash
-# Check what's using the port
-lsof -i :3212
-# Kill the process or change port in docker-compose.yml
-```
+## My contribution
 
-**Database locked (SQLite)**
-```bash
-# Stop all containers
-docker-compose down
-# Remove database file
-rm backend/data/llm_chat.db
-# Restart
-docker-compose up -d
-```
+Solo project by Yu Yang Zheng. I designed and built:
 
-**File upload fails**
-- Check `MAX_FILE_SIZE` in .env
-- Verify `ALLOWED_FILE_TYPES` includes your file type
-- Ensure `uploads/` directory has write permissions
+- the FastAPI backend: async persistence with Alembic migrations, encrypted key storage, streaming SSE chat, file handling;
+- the provider layer for OpenAI, Anthropic, Gemini and OpenAI-compatible APIs;
+- the tool registry, executor and shared multi-turn tool loop, with an SSRF guard for web access;
+- the React frontend: streaming UI with live tool calls and reasoning, stop/resume-safe state, image and video generation, the painted theme, and phone support;
+- the claim-verification dataset and experiment harness;
+- Docker/nginx deployment and GitHub Actions CI.
 
-## Testing
-
-Smoke and end-to-end tests live in `backend/tests/`. They use a temporary
-database and upload directory (no dependency on local config) and a fake LLM
-service (no API keys or network calls required).
-
-```bash
-cd backend
-pip install -r requirements.lock pytest pytest-asyncio
-python -m pytest -v
-```
-
-Coverage:
-
-- Model-provider configuration shape (`tests/test_config.py`)
-- Tool registry registration and listing (`tests/test_tools.py`)
-- Health, root, models, and OpenAPI endpoints (`tests/test_api.py`)
-- Upload file → create conversation → chat → answer flow, with and without
-  tools; asserts that `enable_tools=False` sends zero tool definitions
-  (`tests/test_chat_tools.py`)
-
-### Experiment harness (requires a running backend + API key)
-
-```bash
-python3 scripts/claim_verification.py --base-url http://localhost:3211
-```
-
-Runs the 10-claim dataset in `datasets/claim_verification_dataset.json`
-(tracked in git) under both tool conditions and saves raw answers + a summary
-CSV. Any failed claim-condition (HTTP error, SSE `error`, missing `done`)
-exits non-zero. See [docs/demo-claim-verification.md](docs/demo-claim-verification.md).
-
-## My Contribution
-
-Solo project (Yu Yang Zheng). What I designed and implemented:
-
-- The FastAPI backend with async SQLAlchemy persistence and encrypted API-key storage
-- The provider abstraction layer (`backend/app/services/llm/`) for OpenAI, Anthropic, and Google
-- The tool registry and executor (`backend/app/tools/`) for web search, scraping, datetime, and location
-- Streaming SSE chat endpoints, conversation management, and file attachments
-- The React/Vite/Tailwind frontend with dark mode and streaming rendering
-- Docker Compose deployments (dev, prod) and Nginx reverse-proxy configuration
-
-What I verified in this repository (with automated checks):
-
-- 25 tests in `backend/tests/` pass, using an isolated temporary database and a
-  fake LLM service (no API keys or network needed)
-- `enable_tools` is threaded through `/api/v1/chat/stream` and `/complete`;
-  a test asserts that `enable_tools=False` sends **zero** tool definitions
-  **and** that the tool executor is never invoked even if the model still
-  returns tool calls (guarded at the execution entry)
-- Both endpoints share one tool-call loop (`app/api/tool_loop.py`): model
-  requests tool → execute → results appended → second model call → answer
-  persisted (tested for stream and complete)
-- End-to-end test: upload file → create conversation → chat → persisted answer
-- The 10-claim dataset (committed in `datasets/claim_verification_dataset.json`)
-  and the `scripts/claim_verification.py` harness run both tool conditions,
-  save raw answers for scoring, and exit non-zero on failed runs (tested with
-  fake SSE error / missing-`done` servers)
-- All documented API payloads in `docs/demo-claim-verification.md` match the
-  implemented schemas (`conversation_id` required, 422 otherwise)
-
-## Security Considerations
-
-- API keys are encrypted at rest using Fernet encryption
-- Never commit `.env` files to version control
-- Use strong, unique `ENCRYPTION_KEY` in production
-- Enable HTTPS in production with proper SSL certificates
-- Restrict CORS origins in production
-
-### Privacy Notes (important for research use)
-
-- Prompts and uploaded files are sent to third-party LLM providers (OpenAI, Anthropic, Google). Do not upload personal or confidential data.
-- Use synthetic or de-identified documents for studies; clear `uploads/` between participants.
-- Web search and scraping queries are also sent to external services (DuckDuckGo/SearXNG and target websites).
-- Conversations are stored in the local database; delete or export them per your ethics protocol.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Verified by automated tests (53 backend, 12 frontend) that run in CI on every
+pull request, including: `enable_tools=False` sends zero tool definitions and
+never executes tools; the full upload → conversation → chat → saved-answer
+flow; SSRF blocking (including redirects); upload limits; migrations on fresh
+and legacy databases; and stream parsing when events are split across
+network reads.
 
 ## License
 
-This project is open source and available under the MIT License.
-
-## Acknowledgments
-
-Built with modern tools and frameworks from the open-source community.
-
----
-
-**Note**: This platform is designed for personal or internal use. Ensure you comply with the terms of service of any LLM providers you use.
+MIT (as declared in `backend/pyproject.toml`).
