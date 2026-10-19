@@ -38,8 +38,6 @@ click==8.5.0
     # via
     #   ddgs
     #   uvicorn
-colorama==0.4.6 ; sys_platform == 'win32'
-    # via loguru
 cryptography==50.0.2
     # via
     #   -r requirements.txt
@@ -89,8 +87,6 @@ jiter==0.17.0
     # via
     #   anthropic
     #   openai
-loguru==0.7.3
-    # via -r requirements.txt
 lxml==6.1.3
     # via
     #   -r requirements.txt
@@ -204,5 +200,3 @@ websockets==16.1.1
     # via
     #   google-genai
     #   uvicorn
-win32-setctime==1.2.0 ; sys_platform == 'win32'
-    # via loguru
