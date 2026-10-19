@@ -53,9 +53,9 @@ export function ImageGeneration() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="scroll-area h-full overflow-y-auto pb-[env(safe-area-inset-bottom)]">
       {/* Input Area */}
-      <div className="flex-shrink-0 px-3 pt-4 sm:px-6 sm:pt-6 md:px-8 md:pt-8">
+      <div className="px-3 pt-3 sm:px-6 sm:pt-6 md:px-8 md:pt-8">
         <div className="max-w-4xl mx-auto space-y-4 bg-glass backdrop-blur-xl border border-border-primary/80 rounded-[1.75rem] shadow-paper p-4 sm:p-6">
           {/* Prompt Input */}
           <div>
@@ -138,10 +138,10 @@ export function ImageGeneration() {
       </div>
 
       {/* Gallery Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+      <div className="p-3 sm:p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
           {generatedImages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-16">
+            <div className="flex flex-col items-center justify-center text-center py-8 md:py-16">
               <div className="bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md rounded-[1.75rem] px-10 py-8 shadow-paper border border-border-primary/70 flex flex-col items-center">
               <ImageIcon className="w-20 h-20 text-text-tertiary mb-4" />
               <p className="font-display text-text-primary text-lg font-semibold">还没有生成图片</p>
@@ -161,10 +161,10 @@ export function ImageGeneration() {
                       alt={img.prompt}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="absolute inset-0 transition-all flex items-end justify-end p-2 md:p-0 md:items-center md:justify-center md:bg-black/0 md:group-hover:bg-black/40 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
                       <button
                         onClick={() => handleDownload(img.url, index)}
-                        className="px-4 py-2 bg-cream text-gray-900 rounded-lg font-medium flex items-center space-x-2 shadow-lg hover:bg-gray-100 transition-all"
+                        className="touch-target px-4 py-2 bg-cream/95 text-ink rounded-full font-display font-semibold flex items-center space-x-2 shadow-paper hover:bg-cream transition-all"
                       >
                         <Download className="w-4 h-4" />
                         <span>下载</span>

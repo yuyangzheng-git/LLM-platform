@@ -99,8 +99,19 @@
   --scene-filter: saturate(0.85) brightness(0.8);
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  /* No rubber-band scroll or pull-to-refresh on the app shell */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   font-family: 'Nunito', ui-sans-serif, system-ui, -apple-system, 'PingFang SC',
     'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -164,4 +175,35 @@ code {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Visible viewport height, kept in sync with the on-screen keyboard by
+   useAppHeight(); falls back to dynamic viewport units. */
+.app-height {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+}
+
+/* iOS zooms into any form field under 16px when it gets focus */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Comfortable tap targets (44px) wherever the pointer is a finger */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Scroll areas keep their own momentum and do not drag the page */
+.scroll-area {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }

@@ -25,7 +25,7 @@ export function CopyButton({ text, label = '复制', showLabel = false, classNam
   return (
     <button
       onClick={handleCopy}
-      className={`flex items-center space-x-1 ${className}`}
+      className={`touch-target flex items-center justify-center space-x-1 ${className}`}
       title={currentLabel}
       aria-label={currentLabel}
     >

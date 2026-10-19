@@ -211,6 +211,9 @@ export function UnifiedChatInterface() {
     )
   }
 
+  // Stable so the sidebar's Escape-key listener is not re-registered every render
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+
   const openSidebar = () => {
     setSidebarOpen(true)
     loadConversations()
@@ -234,7 +237,7 @@ export function UnifiedChatInterface() {
       {/* Conversation Sidebar */}
       <ConversationSidebar
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={closeSidebar}
         conversations={conversations}
         currentConversationId={conversationId}
         onSelectConversation={loadConversation}
@@ -245,7 +248,7 @@ export function UnifiedChatInterface() {
       {/* Main Content */}
       <div className="flex-1 min-w-0 flex flex-col h-full">
         {/* Top Bar */}
-        <div className="flex-shrink-0 px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between">
+        <div className="flex-shrink-0 px-3 py-2 sm:px-4 sm:py-3 [@media(max-height:500px)]:py-1 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <IconButton icon={History} onClick={openSidebar} label="对话历史" />
           </div>

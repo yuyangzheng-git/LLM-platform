@@ -8,7 +8,7 @@ export function IconButton({
   className = '',
   ...props
 }) {
-  const baseClasses = 'inline-flex items-center justify-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-roots-300 focus-visible:ring-offset-2'
+  const baseClasses = 'touch-target inline-flex items-center justify-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-roots-300 focus-visible:ring-offset-2'
 
   const sizeClasses = {
     sm: 'p-1.5',

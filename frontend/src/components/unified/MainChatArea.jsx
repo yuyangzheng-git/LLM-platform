@@ -132,8 +132,8 @@ export function MainChatArea({
 
       {!isStarted ? (
         // Welcome screen with centered input
-        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8">
-          <div className="w-full max-w-3xl">
+        <div className="scroll-area flex-1 min-h-0 overflow-y-auto flex px-3 sm:px-6 md:px-8 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="w-full max-w-3xl m-auto py-4">
             <WelcomeScreen />
             {chatInput}
           </div>
@@ -144,7 +144,7 @@ export function MainChatArea({
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6"
+            className="scroll-area flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 md:py-6"
           >
             <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
               {messages.map((msg) => (
@@ -166,7 +166,7 @@ export function MainChatArea({
           )}
 
           {/* Input Area - Fixed at bottom */}
-          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 lg:px-8 pt-2 pb-4 md:pb-6">
+          <div className="flex-shrink-0 px-2 sm:px-4 md:px-6 lg:px-8 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-6 [@media(max-height:500px)]:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <div className="max-w-4xl mx-auto">{chatInput}</div>
           </div>
         </>
