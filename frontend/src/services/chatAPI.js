@@ -38,65 +38,75 @@ export const chatAPI = {
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
+      // Network reads can end mid-line; keep the unfinished tail until the
+      // rest of it arrives so events are never parsed in pieces.
+      let buffer = ''
+
+      const handleLine = (line) => {
+        if (!line.startsWith('data: ')) return false
+        const data = line.slice(6).trim()
+
+        if (data === '[DONE]') return true
+
+        let parsed
+        try {
+          parsed = JSON.parse(data)
+        } catch {
+          // If not JSON, treat as plain text
+          if (data) onChunk(data)
+          return false
+        }
+
+        // Server-side failure: surface it instead of silently stopping
+        if (parsed.type === 'error') {
+          throw new Error(parsed.error || 'Stream error')
+        }
+        // Handle tool call events
+        else if (parsed.type === 'tool_call' && onToolCall) {
+          onToolCall({
+            id: parsed.tool_id,
+            name: parsed.tool_name,
+            arguments: parsed.arguments,
+            status: 'calling'
+          })
+        }
+        // Handle tool result events
+        else if (parsed.type === 'tool_result' && onToolResult) {
+          onToolResult({
+            tool_id: parsed.tool_id,
+            success: parsed.success,
+            result: parsed.result,
+            error: parsed.error
+          })
+        }
+        // Handle reasoning chunks (thinking process)
+        else if (parsed.type === 'reasoning' && parsed.content && onReasoning) {
+          onReasoning(parsed.content)
+        }
+        // Handle regular content chunks
+        else if (parsed.type === 'chunk' && parsed.content) {
+          onChunk(parsed.content)
+        }
+        // Backward compatibility - no type specified
+        else if (parsed.content && !parsed.type) {
+          onChunk(parsed.content)
+        }
+        return false
+      }
 
       while (true) {
         const { done, value } = await reader.read()
 
-        if (done) {
-          break
-        }
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
+        buffer += done ? decoder.decode() : decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = done ? '' : lines.pop()
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim()
+          if (handleLine(line)) return
+        }
 
-            if (data === '[DONE]') {
-              return
-            }
-
-            try {
-              const parsed = JSON.parse(data)
-
-              // Handle tool call events
-              if (parsed.type === 'tool_call' && onToolCall) {
-                onToolCall({
-                  id: parsed.tool_id,
-                  name: parsed.tool_name,
-                  arguments: parsed.arguments,
-                  status: 'calling'
-                })
-              }
-              // Handle tool result events
-              else if (parsed.type === 'tool_result' && onToolResult) {
-                onToolResult({
-                  tool_id: parsed.tool_id,
-                  success: parsed.success,
-                  result: parsed.result,
-                  error: parsed.error
-                })
-              }
-              // Handle reasoning chunks (thinking process)
-              else if (parsed.type === 'reasoning' && parsed.content && onReasoning) {
-                onReasoning(parsed.content)
-              }
-              // Handle regular content chunks
-              else if (parsed.type === 'chunk' && parsed.content) {
-                onChunk(parsed.content)
-              }
-              // Backward compatibility - no type specified
-              else if (parsed.content && !parsed.type) {
-                onChunk(parsed.content)
-              }
-            } catch (e) {
-              // If not JSON, treat as plain text
-              if (data) {
-                onChunk(data)
-              }
-            }
-          }
+        if (done) {
+          break
         }
       }
     } catch (error) {
