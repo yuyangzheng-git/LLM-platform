@@ -1,10 +1,13 @@
 # Multi-stage build for Python backend
 FROM python:3.11-slim as builder
 
+ARG DEBIAN_MIRROR=mirrors.aliyun.com
+
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y \
     gcc \
     g++ \
     libmagic1 \
@@ -20,10 +23,13 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # Final stage
 FROM python:3.11-slim
 
+ARG DEBIAN_MIRROR=mirrors.aliyun.com
+
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+RUN sed -i "s|deb.debian.org|${DEBIAN_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y \
     libmagic1 \
     curl \
     libpq5 \
