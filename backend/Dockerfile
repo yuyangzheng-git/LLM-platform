@@ -37,6 +37,8 @@ ENV PATH=/root/.local/bin:$PATH
 
 # Copy application code
 COPY app ./app
+COPY alembic.ini ./
+COPY migrations ./migrations
 
 # Create directories
 RUN mkdir -p /app/data /app/uploads /app/logs

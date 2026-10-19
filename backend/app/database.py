@@ -1,6 +1,14 @@
+from pathlib import Path
+
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from app.config import settings
+
+ALEMBIC_INI = Path(__file__).resolve().parent.parent / "alembic.ini"
+
+# Revision matching the schema the old create_all() startup produced
+BASELINE_REVISION = "0001"
 
 # Create async engine
 engine = create_async_engine(
@@ -31,7 +39,22 @@ async def get_db() -> AsyncSession:
             await session.close()
 
 
-# Initialize database
+def _upgrade_to_head(sync_conn) -> None:
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(str(ALEMBIC_INI))
+    cfg.attributes["connection"] = sync_conn
+
+    tables = set(inspect(sync_conn).get_table_names())
+    if "alembic_version" not in tables and "conversations" in tables:
+        # Database created before migrations existed: adopt it at the baseline
+        command.stamp(cfg, BASELINE_REVISION)
+
+    command.upgrade(cfg, "head")
+
+
+# Initialize database: apply any pending Alembic migrations
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_upgrade_to_head)
