@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useToast } from '../../hooks/custom/useToast'
+import { downloadFile } from '../../utils/download'
 import { Wand2, Download, Loader2, Image as ImageIcon } from 'lucide-react'
 import { IMAGE_MODELS } from '../../config/generationModels'
 
 export function ImageGeneration() {
+  const { showToast } = useToast()
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('dall-e-3')
   const [size, setSize] = useState('1024x1024')
@@ -28,24 +31,25 @@ export function ImageGeneration() {
       })
 
       if (!response.ok) {
-        throw new Error(`生成失败: ${response.status}`)
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.detail || `HTTP ${response.status}`)
       }
 
       const data = await response.json()
-      setGeneratedImages([data, ...generatedImages])
+      setGeneratedImages((prev) => [data, ...prev])
     } catch (error) {
       console.error('Image generation error:', error)
-      alert('图片生成失败: ' + error.message)
+      showToast(`图片生成失败：${error.message}`)
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleDownload = (imageUrl, index) => {
-    const link = document.createElement('a')
-    link.href = imageUrl
-    link.download = `generated-image-${Date.now()}-${index}.png`
-    link.click()
+  const handleDownload = async (imageUrl, index) => {
+    const result = await downloadFile(imageUrl, `generated-image-${Date.now()}-${index}.png`)
+    if (result === 'opened') {
+      showToast('已在新标签页打开，可在那里保存文件', 'info')
+    }
   }
 
   return (

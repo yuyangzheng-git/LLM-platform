@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useToast } from '../../hooks/custom/useToast'
+import { downloadFile } from '../../utils/download'
 import { Video, Download, Loader2, Play } from 'lucide-react'
 import { VIDEO_MODELS } from '../../config/generationModels'
 
 export function VideoGeneration() {
+  const { showToast } = useToast()
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('sora-2')
   const [duration, setDuration] = useState('5s')
@@ -32,24 +35,25 @@ export function VideoGeneration() {
       })
 
       if (!response.ok) {
-        throw new Error(`生成失败: ${response.status}`)
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.detail || `HTTP ${response.status}`)
       }
 
       const data = await response.json()
-      setGeneratedVideos([data, ...generatedVideos])
+      setGeneratedVideos((prev) => [data, ...prev])
     } catch (error) {
       console.error('Video generation error:', error)
-      alert('视频生成失败: ' + error.message)
+      showToast(`视频生成失败：${error.message}`)
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleDownload = (videoUrl, index) => {
-    const link = document.createElement('a')
-    link.href = videoUrl
-    link.download = `generated-video-${Date.now()}-${index}.mp4`
-    link.click()
+  const handleDownload = async (videoUrl, index) => {
+    const result = await downloadFile(videoUrl, `generated-video-${Date.now()}-${index}.mp4`)
+    if (result === 'opened') {
+      showToast('已在新标签页打开，可在那里保存文件', 'info')
+    }
   }
 
   return (

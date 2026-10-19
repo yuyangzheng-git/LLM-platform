@@ -16,7 +16,7 @@ function App() {
   ]
 
   return (
-    <div className="h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 dark:from-stone-900 dark:via-amber-950 dark:to-orange-950 flex flex-col overflow-hidden">
+    <div className="h-screen h-[100dvh] bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 dark:from-stone-900 dark:via-amber-950 dark:to-orange-950 flex flex-col overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-orange-400/10 to-rose-400/10 dark:from-amber-600/5 dark:to-orange-600/5 rounded-full blur-3xl animate-pulse-slow"></div>
@@ -61,6 +61,8 @@ function App() {
               <ThemeToggle className="bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass" />
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="切换功能菜单"
+                aria-expanded={isMobileMenuOpen}
                 className="p-2 rounded-lg bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass"
               >
                 <Menu className="w-6 h-6 text-text-primary" />
@@ -96,11 +98,20 @@ function App() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative z-10">
-        {activeTab === 'chat' && <UnifiedChatInterface />}
-        {activeTab === 'image' && <ImageGeneration />}
-        {activeTab === 'video' && <VideoGeneration />}
+      {/* Main Content Area. No z-index here: it would trap the mobile
+          history drawer underneath the top navigation bar. */}
+      <div className="flex-1 overflow-hidden relative">
+        {/* Tabs stay mounted so switching never loses a chat in progress
+            or generated results */}
+        <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
+          <UnifiedChatInterface />
+        </div>
+        <div className={activeTab === 'image' ? 'h-full' : 'hidden'}>
+          <ImageGeneration />
+        </div>
+        <div className={activeTab === 'video' ? 'h-full' : 'hidden'}>
+          <VideoGeneration />
+        </div>
       </div>
     </div>
   )
