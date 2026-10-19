@@ -1,108 +1,158 @@
-import { useState, useEffect, useRef } from 'react'
-import { Menu } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { History } from 'lucide-react'
 import { ConversationSidebar } from './ConversationSidebar'
 import { MainChatArea } from './MainChatArea'
-import { ChatHeader } from './ChatHeader'
 import { IconButton } from '../common/IconButton'
 import { conversationAPI } from '../../services/conversationAPI'
 import { fileAPI } from '../../services/fileAPI'
 import { chatAPI } from '../../services/chatAPI'
+import { TOP_MODELS, modelDisplayName } from '../../config/models'
+import { useToast } from '../../hooks/custom/useToast'
+import {
+  FILES_ONLY_PROMPT,
+  addToolCall,
+  applyToolResult,
+  newKey,
+  readConversationIdFromUrl,
+  uploadErrorMessage,
+  withKey,
+  writeConversationIdToUrl,
+} from './chatState'
+
+// Backend accepts up to 500 messages per page
+const HISTORY_PAGE_SIZE = 500
 
 export function UnifiedChatInterface() {
+  const { showToast } = useToast()
+
   // UI State
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isStarted, setIsStarted] = useState(false)
 
   // Chat State
   const [inputMessage, setInputMessage] = useState('')
-  const [selectedFiles, setSelectedFiles] = useState([])
-  const [uploadedFileIds, setUploadedFileIds] = useState([])
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
+  // { key, file, status: 'uploading' | 'done' | 'error', progress, id, error }
+  const [attachments, setAttachments] = useState([])
   const [messages, setMessages] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [currentToolCalls, setCurrentToolCalls] = useState([])
+  const [isSending, setIsSending] = useState(false)
+  const abortRef = useRef(null)
 
   // Conversation State
   const [conversationId, setConversationId] = useState(null)
   const [conversations, setConversations] = useState([])
 
-  // Model State - 默认使用GPT-4o
-  const [selectedModel, setSelectedModel] = useState('gpt-4o')
+  // Model State. Fixed per conversation once it exists.
+  const [selectedModel, setSelectedModel] = useState(TOP_MODELS[0].id)
 
-  const fileInputRef = useRef(null)
+  const isStarted = conversationId !== null || messages.length > 0
+  const isUploading = attachments.some((a) => a.status === 'uploading')
+  const readyFileIds = attachments.filter((a) => a.status === 'done').map((a) => a.id)
+  const canSend = !isSending && !isUploading && (inputMessage.trim() !== '' || readyFileIds.length > 0)
 
-  // Load initial data
-  useEffect(() => {
-    loadConversations()
-  }, [])
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       const data = await conversationAPI.list()
       setConversations(data)
     } catch (err) {
-      console.error('Failed to load conversations:', err)
+      showToast(`加载对话历史失败：${err.message}`)
     }
-  }
+  }, [showToast])
 
-  const handleFileSelect = async (e) => {
-    const files = Array.from(e.target.files)
-    setSelectedFiles((prev) => [...prev, ...files])
-
-    setIsUploading(true)
-    setUploadProgress(0)
+  const loadConversation = useCallback(async (id) => {
+    abortRef.current?.abort()
     try {
-      const uploadedFiles = await fileAPI.uploadBatch(files, null, (progress) => {
-        setUploadProgress(progress)
-      })
-      const fileIds = uploadedFiles.map((f) => f.id)
-      setUploadedFileIds((prev) => [...prev, ...fileIds])
+      const [conversation, data] = await Promise.all([
+        conversationAPI.get(id),
+        conversationAPI.getMessages(id, 0, HISTORY_PAGE_SIZE),
+      ])
+      setConversationId(id)
+      setMessages(data.map(withKey))
+      setSelectedModel(conversation.model_name)
+      setAttachments([])
+      writeConversationIdToUrl(id)
+      setSidebarOpen(false)
     } catch (err) {
-      console.error('File upload failed:', err)
-    } finally {
-      setIsUploading(false)
-      setUploadProgress(0)
+      showToast(`加载对话失败：${err.message}`)
+      writeConversationIdToUrl(null)
     }
+  }, [showToast])
+
+  // Initial load: history list, plus the conversation named in the URL
+  useEffect(() => {
+    loadConversations()
+    const idFromUrl = readConversationIdFromUrl()
+    if (idFromUrl) {
+      loadConversation(idFromUrl)
+    }
+    return () => abortRef.current?.abort()
+  }, [loadConversations, loadConversation])
+
+  const updateAttachment = (key, patch) => {
+    setAttachments((prev) => prev.map((a) => (a.key === key ? { ...a, ...patch } : a)))
   }
 
-  const removeFile = (index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
-    setUploadedFileIds((prev) => prev.filter((_, i) => i !== index))
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || [])
+    // Reset the input so choosing the same file again still fires onChange
+    if (typeof e.target.value === 'string') {
+      e.target.value = ''
+    }
+
+    files.forEach((file) => {
+      const key = newKey('file')
+      setAttachments((prev) => [...prev, { key, file, status: 'uploading', progress: 0 }])
+
+      fileAPI
+        .upload(file, null, (progress) => updateAttachment(key, { progress }))
+        .then((info) => updateAttachment(key, { status: 'done', progress: 100, id: info.id }))
+        .catch((err) => {
+          const message = uploadErrorMessage(err)
+          updateAttachment(key, { status: 'error', error: message })
+          showToast(`${file.name} 上传失败：${message}`)
+        })
+    })
+  }
+
+  const removeAttachment = (key) => {
+    const attachment = attachments.find((a) => a.key === key)
+    setAttachments((prev) => prev.filter((a) => a.key !== key))
+    // Clean up a file that was already uploaded but will not be sent
+    if (attachment?.status === 'done') {
+      fileAPI.delete(attachment.id).catch(() => {})
+    }
   }
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() && uploadedFileIds.length === 0) return
+    if (isSending) return
+    if (isUploading) {
+      showToast('文件还在上传，请稍候再发送', 'info')
+      return
+    }
+    if (!canSend) return
 
-    const messageToSend = inputMessage
-    const filesToSend = uploadedFileIds
+    const messageToSend = inputMessage.trim() ? inputMessage : FILES_ONLY_PROMPT
+    const fileIds = readyFileIds
+    const assistantKey = newKey()
+    const now = new Date().toISOString()
 
-    // Clear input immediately
     setInputMessage('')
-    setSelectedFiles([])
-    setUploadedFileIds([])
+    setAttachments([])
+    setMessages((prev) => [
+      ...prev,
+      { key: newKey(), role: 'user', content: messageToSend, created_at: now, fileCount: fileIds.length },
+      { key: assistantKey, role: 'assistant', content: '', reasoning: '', tool_calls: [], created_at: now, isStreaming: true },
+    ])
+    setIsSending(true)
 
-    // Start conversation if not started
-    if (!isStarted) {
-      setIsStarted(true)
-    }
+    const controller = new AbortController()
+    abortRef.current = controller
 
-    // Add user message immediately with file indicators
-    const userMessage = {
-      role: 'user',
-      content: messageToSend,
-      created_at: new Date().toISOString(),
-      fileCount: filesToSend.length,
-    }
-    setMessages((prev) => [...prev, userMessage])
+    // Update the assistant message by key, never by position
+    const patchAssistant = (fn) =>
+      setMessages((prev) => prev.map((m) => (m.key === assistantKey ? { ...m, ...fn(m) } : m)))
 
-    // Show loading indicator
-    setIsLoading(true)
-
-    // Create new conversation if needed
-    let convId = conversationId
-    if (!convId) {
-      try {
+    try {
+      let convId = conversationId
+      if (!convId) {
         const newConv = await conversationAPI.create({
           title: messageToSend.slice(0, 50),
           model_provider: 'openai',
@@ -110,181 +160,76 @@ export function UnifiedChatInterface() {
         })
         convId = newConv.id
         setConversationId(convId)
+        writeConversationIdToUrl(convId)
         loadConversations()
-      } catch (err) {
-        console.error('Failed to create conversation:', err)
-        setIsLoading(false)
-        return
       }
-    }
-
-    // Send message with streaming
-    try {
-      let fullResponse = ''
-      let fullReasoning = ''
-      let hasReceivedFirstChunk = false
-
-      // Reset tool calls for new response
-      setCurrentToolCalls([])
-
-      // Add empty assistant message first
-      const assistantMessageIndex = messages.length + 1
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: '',
-        reasoning: '',
-        tool_calls: [],
-        created_at: new Date().toISOString(),
-      }])
 
       await chatAPI.streamChat(
         convId,
         messageToSend,
-        (chunk) => {
-          // Hide loading indicator after first chunk
-          if (!hasReceivedFirstChunk) {
-            hasReceivedFirstChunk = true
-            setIsLoading(false)
-          }
-
-          fullResponse += chunk
-          // Update immediately on every chunk
-          setMessages((prev) => {
-            const updated = [...prev]
-            if (updated[assistantMessageIndex]) {
-              updated[assistantMessageIndex] = {
-                ...updated[assistantMessageIndex],
-                content: fullResponse
-              }
-            }
-            return updated
-          })
-        },
-        filesToSend,
-        // Reasoning callback
-        (reasoningChunk) => {
-          fullReasoning += reasoningChunk
-          // Update reasoning content
-          setMessages((prev) => {
-            const updated = [...prev]
-            if (updated[assistantMessageIndex]) {
-              updated[assistantMessageIndex] = {
-                ...updated[assistantMessageIndex],
-                reasoning: fullReasoning
-              }
-            }
-            return updated
-          })
-        },
-        // Tool call callback
-        (toolCall) => {
-          setCurrentToolCalls((prev) => [...prev, {
-            ...toolCall,
-            status: 'calling'
-          }])
-        },
-        // Tool result callback
-        (toolResult) => {
-          setCurrentToolCalls((prev) =>
-            prev.map((call) =>
-              call.id === toolResult.tool_id
-                ? {
-                    ...call,
-                    status: toolResult.success ? 'completed' : 'error',
-                    result: toolResult.result,
-                    error: toolResult.error
-                  }
-                : call
-            )
-          )
-        }
+        (chunk) => patchAssistant((m) => ({ content: m.content + chunk })),
+        fileIds,
+        (reasoning) => patchAssistant((m) => ({ reasoning: (m.reasoning || '') + reasoning })),
+        (toolCall) => patchAssistant((m) => ({ tool_calls: addToolCall(m.tool_calls, toolCall) })),
+        (toolResult) => patchAssistant((m) => ({ tool_calls: applyToolResult(m.tool_calls, toolResult) })),
+        { signal: controller.signal }
       )
-
-      // After streaming completes, save tool calls to message
-      setMessages((prev) => {
-        const updated = [...prev]
-        if (updated[assistantMessageIndex]) {
-          updated[assistantMessageIndex] = {
-            ...updated[assistantMessageIndex],
-            tool_calls: currentToolCalls.length > 0 ? currentToolCalls : undefined
-          }
-        }
-        return updated
-      })
-
-      // Ensure loading is hidden at the end
-      setIsLoading(false)
+      patchAssistant(() => ({ isStreaming: false }))
     } catch (err) {
-      console.error('Failed to send message:', err)
-      setIsLoading(false)
-      // Update last message with error
-      setMessages((prev) => {
-        const updated = [...prev]
-        const lastIdx = updated.length - 1
-        if (updated[lastIdx] && updated[lastIdx].role === 'assistant') {
-          updated[lastIdx] = {
-            ...updated[lastIdx],
-            content: '抱歉，发生了错误。请稍后重试。',
-            isError: true
-          }
-        }
-        return updated
-      })
+      if (err.name === 'AbortError') {
+        patchAssistant(() => ({ isStreaming: false, stopped: true }))
+      } else {
+        patchAssistant(() => ({
+          isStreaming: false,
+          isError: true,
+          error: err.message || '发送失败，请稍后重试',
+        }))
+      }
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null
+      }
+      setIsSending(false)
     }
+  }
+
+  const handleStop = () => {
+    abortRef.current?.abort()
   }
 
   const handleNewChat = () => {
+    abortRef.current?.abort()
     setConversationId(null)
     setMessages([])
-    setIsStarted(false)
     setInputMessage('')
-    setSelectedFiles([])
-    setUploadedFileIds([])
+    setAttachments([])
     setSidebarOpen(false)
+    writeConversationIdToUrl(null)
+    // A model from an old conversation may not be offered any more
+    setSelectedModel((current) =>
+      TOP_MODELS.some((m) => m.id === current) ? current : TOP_MODELS[0].id
+    )
   }
 
-  const loadConversation = async (id) => {
-    try {
-      const data = await conversationAPI.getMessages(id)
-      setConversationId(id)
-      setMessages(data)
-      setIsStarted(true)
-      setSidebarOpen(false)
-    } catch (err) {
-      console.error('Failed to load conversation:', err)
-    }
+  // Stable so the sidebar's Escape-key listener is not re-registered every render
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+
+  const openSidebar = () => {
+    setSidebarOpen(true)
+    loadConversations()
   }
 
   const deleteConversation = async (id) => {
-    if (!confirm('确定要删除这个对话吗？')) return
-
     try {
       await conversationAPI.delete(id)
-
-      // If deleting current conversation, start new chat
       if (id === conversationId) {
         handleNewChat()
       }
-
-      // Reload conversations list
       loadConversations()
+      showToast('对话已删除', 'success')
     } catch (err) {
-      console.error('Failed to delete conversation:', err)
-      alert('删除对话失败，请重试')
+      showToast(`删除对话失败：${err.message}`)
     }
-  }
-
-  const exportConversation = (format) => {
-    if (!conversationId || messages.length === 0) return
-
-    const content = messages.map((m) => `${m.role.toUpperCase()}:\n${m.content}\n\n`).join('')
-    const blob = new Blob([content], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `conversation-${conversationId}.${format}`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -292,7 +237,7 @@ export function UnifiedChatInterface() {
       {/* Conversation Sidebar */}
       <ConversationSidebar
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={closeSidebar}
         conversations={conversations}
         currentConversationId={conversationId}
         onSelectConversation={loadConversation}
@@ -301,23 +246,23 @@ export function UnifiedChatInterface() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full">
-        {/* Top Bar - 合并后的单一顶栏 */}
-        <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 flex items-center justify-between bg-white/50 dark:bg-bg-secondary/50 backdrop-blur-xl border-b border-border-primary">
+      <div className="flex-1 min-w-0 flex flex-col h-full">
+        {/* Top Bar */}
+        <div className="flex-shrink-0 px-3 py-2 sm:px-4 sm:py-3 [@media(max-height:500px)]:py-1 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <IconButton
-              icon={Menu}
-              onClick={() => setSidebarOpen(true)}
-              label="打开对话历史"
-            />
+            <IconButton icon={History} onClick={openSidebar} label="对话历史" />
           </div>
 
-          <div className="flex items-center space-x-2 md:space-x-3">
+          <div className="flex items-center min-w-0 space-x-2 md:space-x-3">
             {isStarted && selectedModel && (
-              <div className="bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 px-3 sm:px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-orange-300/50 dark:border-amber-400/30">
-                <div className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-orange-600 via-amber-600 to-rose-600 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 bg-clip-text text-transparent whitespace-nowrap">
-                  {selectedModel}
-                </div>
+              <div
+                className="min-w-0 flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-cream/80 dark:bg-bg-secondary/80 border border-road-200 dark:border-road-700/60 shadow-paper"
+                title="当前对话使用的模型"
+              >
+                <span className="w-2 h-2 rounded-full bg-road-400 flex-shrink-0" />
+                <span className="truncate text-xs sm:text-sm font-display font-semibold text-road-700 dark:text-road-200 whitespace-nowrap">
+                  {modelDisplayName(selectedModel)}
+                </span>
               </div>
             )}
           </div>
@@ -327,19 +272,20 @@ export function UnifiedChatInterface() {
         <div className="flex-1 overflow-hidden">
           <MainChatArea
             messages={messages}
+            conversationId={conversationId}
             inputMessage={inputMessage}
             onInputChange={setInputMessage}
             onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            selectedFiles={selectedFiles}
+            onStop={handleStop}
+            isSending={isSending}
+            canSend={canSend}
+            attachments={attachments}
             onFileSelect={handleFileSelect}
-            onRemoveFile={removeFile}
-            isUploading={isUploading}
-            uploadProgress={uploadProgress}
+            onRemoveAttachment={removeAttachment}
             isStarted={isStarted}
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
-            currentToolCalls={currentToolCalls}
+            modelLocked={conversationId !== null}
           />
         </div>
       </div>

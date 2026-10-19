@@ -3,29 +3,33 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Copy, Paperclip, ChevronDown, ChevronUp, Brain } from 'lucide-react'
+import { Paperclip, ChevronDown, ChevronUp, Brain, AlertCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/custom/useTheme'
 import ToolCallDisplay from './ToolCallDisplay'
+import { TypingIndicator } from './TypingIndicator'
+import { CopyButton } from '../common/CopyButton'
 
 // Markdown components with theme support
 const createMarkdownComponents = (theme) => ({
-  code({ node, inline, className, children, ...props }) {
+  // react-markdown v9 no longer passes `inline`: a fenced block is one with
+  // a language class or a newline in it, everything else is inline code.
+  code({ node, className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || '')
-    const language = match ? match[1] : ''
-    return !inline && language ? (
+    const text = String(children)
+    const isBlock = Boolean(match) || text.includes('\n')
+    return isBlock ? (
       <div className="relative group my-4">
-        <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <button
-            onClick={() => navigator.clipboard.writeText(String(children))}
-            className="px-3 py-1 bg-bg-tertiary hover:bg-bg-secondary text-text-primary text-xs rounded flex items-center space-x-1 shadow-md"
-          >
-            <Copy className="w-3 h-3" />
-            <span>复制代码</span>
-          </button>
+        <div className="absolute right-2 top-2 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <CopyButton
+            text={text.replace(/\n$/, '')}
+            label="复制代码"
+            showLabel
+            className="px-3 py-1 bg-bg-tertiary hover:bg-bg-secondary text-text-primary text-xs rounded shadow-md"
+          />
         </div>
         <SyntaxHighlighter
           style={theme === 'dark' ? oneDark : oneLight}
-          language={language}
+          language={match ? match[1] : 'text'}
           PreTag="div"
           customStyle={{
             margin: 0,
@@ -36,7 +40,7 @@ const createMarkdownComponents = (theme) => ({
           }}
           {...props}
         >
-          {String(children).replace(/\n$/, '')}
+          {text.replace(/\n$/, '')}
         </SyntaxHighlighter>
       </div>
     ) : (
@@ -47,6 +51,10 @@ const createMarkdownComponents = (theme) => ({
         {children}
       </code>
     )
+  },
+  // The code renderer above draws its own block, so skip the extra <pre>
+  pre({ children }) {
+    return <>{children}</>
   },
   p({ children }) {
     return <p className="mb-4 last:mb-0 leading-relaxed text-base break-words">{children}</p>
@@ -62,7 +70,7 @@ const createMarkdownComponents = (theme) => ({
   },
   blockquote({ children }) {
     return (
-      <blockquote className="border-l-4 border-orange-500 dark:border-amber-400 pl-4 py-2 my-4 bg-orange-50 dark:bg-amber-900/20 rounded-r-lg break-words overflow-wrap-anywhere">
+      <blockquote className="border-l-4 border-roots-500 dark:border-road-400 pl-4 py-2 my-4 bg-roots-50 dark:bg-road-900/20 rounded-r-lg break-words overflow-wrap-anywhere">
         {children}
       </blockquote>
     )
@@ -78,7 +86,7 @@ const createMarkdownComponents = (theme) => ({
   },
   thead({ children }) {
     return (
-      <thead className="bg-orange-100 dark:bg-amber-900/30">
+      <thead className="bg-roots-100 dark:bg-road-900/30">
         {children}
       </thead>
     )
@@ -104,16 +112,16 @@ const createMarkdownComponents = (theme) => ({
     )
   },
   h1({ children }) {
-    return <h1 className="text-3xl font-bold mb-4 mt-6 first:mt-0 text-gradient-primary">{children}</h1>
+    return <h1 className="font-display text-2xl md:text-3xl font-bold mb-4 mt-6 first:mt-0 text-roots-600 dark:text-roots-300">{children}</h1>
   },
   h2({ children }) {
-    return <h2 className="text-2xl font-bold mb-3 mt-5 first:mt-0 text-gradient-primary">{children}</h2>
+    return <h2 className="font-display text-xl md:text-2xl font-bold mb-3 mt-5 first:mt-0 text-road-700 dark:text-road-300">{children}</h2>
   },
   h3({ children }) {
-    return <h3 className="text-xl font-bold mb-3 mt-4 first:mt-0">{children}</h3>
+    return <h3 className="font-display text-lg md:text-xl font-bold mb-3 mt-4 first:mt-0">{children}</h3>
   },
   h4({ children }) {
-    return <h4 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h4>
+    return <h4 className="font-display text-base md:text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h4>
   },
   a({ children, href }) {
     return (
@@ -121,7 +129,7 @@ const createMarkdownComponents = (theme) => ({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-orange-600 dark:text-amber-400 hover:underline"
+        className="text-roots-600 dark:text-road-400 hover:underline"
       >
         {children}
       </a>
@@ -138,23 +146,25 @@ const createMarkdownComponents = (theme) => ({
   },
 })
 
-export const Message = memo(function Message({ message, index }) {
+export const Message = memo(function Message({ message }) {
   const { theme } = useTheme()
   const [showReasoning, setShowReasoning] = useState(false)
 
   // Memoize markdown components to avoid recreation on every render
   const markdownComponents = useMemo(() => createMarkdownComponents(theme), [theme])
 
+  const isAssistant = message.role === 'assistant'
+  const hasToolCalls = isAssistant && message.tool_calls?.length > 0
+  const isThinking =
+    isAssistant && message.isStreaming && !message.content && !message.reasoning && !hasToolCalls
+
   return (
-    <div
-      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
-      style={{ animationDelay: `${index * 0.05}s` }}
-    >
+    <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
       <div
-        className={`max-w-3xl break-words ${
+        className={`max-w-full md:max-w-3xl min-w-0 break-words ${
           message.role === 'user'
-            ? 'bg-gradient-message-user text-white rounded-2xl md:rounded-[2rem] px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 shadow-xl hover:shadow-2xl transition-all'
-            : 'bg-message-assistant backdrop-blur-xl border border-border-primary rounded-2xl md:rounded-[2rem] px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 shadow-lg hover:shadow-xl transition-all'
+            ? 'bg-gradient-message-user text-cream rounded-[1.5rem] rounded-br-md px-4 sm:px-5 md:px-6 py-3 md:py-3.5 shadow-glow-roots'
+            : 'bg-message-assistant backdrop-blur-xl border border-border-primary/80 rounded-[1.5rem] rounded-bl-md px-4 sm:px-6 md:px-7 py-4 sm:py-5 shadow-paper'
         }`}
       >
         {/* File indicator for user messages */}
@@ -167,15 +177,20 @@ export const Message = memo(function Message({ message, index }) {
           </div>
         )}
 
+        {isThinking && <TypingIndicator />}
+
         {/* Reasoning/Thinking process for assistant messages */}
-        {message.role === 'assistant' && message.reasoning && (
+        {isAssistant && message.reasoning && (
           <div className="mb-4 pb-4 border-b border-border-primary">
             <button
               onClick={() => setShowReasoning(!showReasoning)}
               className="flex items-center space-x-2 text-text-secondary hover:text-text-primary transition-colors w-full group"
+              aria-expanded={showReasoning}
             >
-              <Brain className="w-4 h-4 text-orange-500 dark:text-amber-400" />
-              <span className="text-sm font-medium">思考过程</span>
+              <Brain className="w-4 h-4 text-roots-500 dark:text-road-400" />
+              <span className="text-sm font-medium">
+                {message.isStreaming && !message.content ? '正在思考…' : '思考过程'}
+              </span>
               {showReasoning ? (
                 <ChevronUp className="w-4 h-4 ml-auto group-hover:translate-y-[-2px] transition-transform" />
               ) : (
@@ -183,7 +198,7 @@ export const Message = memo(function Message({ message, index }) {
               )}
             </button>
             {showReasoning && (
-              <div className="mt-3 p-4 bg-orange-50/50 dark:bg-amber-900/10 rounded-xl border border-orange-200/50 dark:border-amber-400/20 animate-fadeIn">
+              <div className="mt-3 p-4 bg-roots-50/50 dark:bg-road-900/10 rounded-xl border border-roots-200/50 dark:border-road-400/20 animate-fadeIn">
                 <div className="text-sm text-text-secondary italic leading-relaxed whitespace-pre-wrap">
                   {message.reasoning}
                 </div>
@@ -192,25 +207,37 @@ export const Message = memo(function Message({ message, index }) {
           </div>
         )}
 
-        {/* Tool calls display for assistant messages */}
-        {message.role === 'assistant' && message.tool_calls && (
-          <ToolCallDisplay toolCalls={message.tool_calls} />
+        {/* Tool calls, live while streaming and restored from history */}
+        {hasToolCalls && <ToolCallDisplay toolCalls={message.tool_calls} />}
+
+        {message.content && (
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {message.content}
+          </ReactMarkdown>
         )}
 
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-          {message.content}
-        </ReactMarkdown>
+        {message.stopped && (
+          <p className="mt-3 text-sm text-text-tertiary italic">已停止生成</p>
+        )}
 
-        {/* Copy button for assistant messages */}
-        {message.role === 'assistant' && !message.isError && (
+        {message.isError && (
+          <div
+            role="alert"
+            className="mt-3 flex items-start gap-2 text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl px-3 py-2"
+          >
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>{message.error || '抱歉，发生了错误。请稍后重试。'}</span>
+          </div>
+        )}
+
+        {/* Copy button for finished assistant messages */}
+        {isAssistant && !message.isStreaming && message.content && (
           <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-border-primary">
-            <button
-              onClick={() => navigator.clipboard.writeText(message.content)}
-              className="p-1.5 hover:bg-bg-tertiary rounded transition-colors"
-              title="复制内容"
-            >
-              <Copy className="w-4 h-4 text-text-secondary" />
-            </button>
+            <CopyButton
+              text={message.content}
+              label="复制内容"
+              className="p-1.5 hover:bg-bg-tertiary rounded transition-colors text-text-secondary"
+            />
           </div>
         )}
       </div>

@@ -36,9 +36,7 @@ def test_models_endpoint_shape():
 
 
 def test_openapi_schema_generated():
-    with TestClient(app) as client:
-        response = client.get("/openapi.json")
-    assert response.status_code == 200
-    schema = response.json()
+    # /openapi.json is only served in debug mode; build the schema directly
+    schema = app.openapi()
     assert "/api/v1/chat" in str(schema["paths"].keys())
     assert "/api/v1/files" in str(schema["paths"].keys())

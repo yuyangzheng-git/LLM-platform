@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -26,17 +26,22 @@ class ConversationResponse(BaseModel):
     title: str
     model_provider: str
     model_name: str
-    system_prompt: Optional[str]
-    temperature: float
-    max_tokens: int
-    top_p: float
-    message_count: int
-    total_tokens: int
-    created_at: datetime
-    updated_at: datetime
+    system_prompt: Optional[str] = None
+    # Defaults keep one incomplete row from failing the whole list
+    temperature: float = 0.7
+    max_tokens: int = 2000
+    top_p: float = 1.0
+    message_count: int = 0
+    total_tokens: int = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    @field_validator("temperature", "max_tokens", "top_p", "message_count", "total_tokens", mode="before")
+    @classmethod
+    def _none_to_default(cls, v, info):
+        return cls.model_fields[info.field_name].default if v is None else v
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageCreate(BaseModel):
@@ -54,8 +59,7 @@ class MessageResponse(BaseModel):
     total_tokens: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChatRequest(BaseModel):
@@ -85,8 +89,7 @@ class FileUploadResponse(BaseModel):
     processed: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ModelConfigCreate(BaseModel):
@@ -123,5 +126,4 @@ class ModelConfigResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

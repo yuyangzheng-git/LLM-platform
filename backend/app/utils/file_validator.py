@@ -1,7 +1,34 @@
 from typing import Tuple
-import mimetypes
 import os
 from app.config import settings
+
+# Extension -> MIME type. The extension is the source of truth; the
+# browser-supplied Content-Type is not trusted.
+SUPPORTED_EXTENSIONS = {
+    # Images (SVG is excluded: it can carry scripts and cannot be processed)
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+    # Documents
+    ".pdf": "application/pdf",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    # Text
+    ".txt": "text/plain",
+    ".md": "text/markdown",
+    ".csv": "text/csv",
+    ".html": "text/html",
+    ".htm": "text/html",
+    ".json": "application/json",
+    ".xml": "text/xml",
+}
 
 
 class FileValidator:
@@ -19,25 +46,20 @@ class FileValidator:
         Returns:
             Tuple of (is_valid, error_message)
         """
-        # 获取文件扩展名
         ext = os.path.splitext(filename.lower())[1]
 
-        # 定义支持的扩展名 - 只检查这个！
-        supported_extensions = {
-            # Images
-            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg",
-            # Documents
-            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-            # Text
-            ".txt", ".md", ".csv", ".html", ".htm", ".json", ".xml",
-        }
-
         # 只检查扩展名，完全忽略 MIME 类型
-        if ext not in supported_extensions:
-            supported_list = ", ".join(sorted(supported_extensions))
+        if ext not in SUPPORTED_EXTENSIONS:
+            supported_list = ", ".join(sorted(SUPPORTED_EXTENSIONS))
             return False, f"不支持的文件类型 {ext}。支持的类型: {supported_list}"
 
         return True, ""
+
+    @staticmethod
+    def guess_mime_type(filename: str) -> str:
+        """MIME type for a filename that already passed validate_file_type."""
+        ext = os.path.splitext(filename.lower())[1]
+        return SUPPORTED_EXTENSIONS.get(ext, "application/octet-stream")
 
     @staticmethod
     def validate_file_size(file_size: int) -> Tuple[bool, str]:
@@ -82,40 +104,5 @@ class FileValidator:
         # Check filename length
         if len(filename) > 255:
             return False, "Filename too long (max 255 characters)"
-
-        return True, ""
-
-    @classmethod
-    def validate_file(
-        cls,
-        filename: str,
-        file_size: int,
-        mime_type: str
-    ) -> Tuple[bool, str]:
-        """
-        Comprehensive file validation
-
-        Args:
-            filename: Original filename
-            file_size: File size in bytes
-            mime_type: MIME type
-
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
-        # Validate filename
-        is_valid, error = cls.validate_filename(filename)
-        if not is_valid:
-            return False, error
-
-        # Validate file size
-        is_valid, error = cls.validate_file_size(file_size)
-        if not is_valid:
-            return False, error
-
-        # Validate file type
-        is_valid, error = cls.validate_file_type(filename, mime_type)
-        if not is_valid:
-            return False, error
 
         return True, ""

@@ -20,6 +20,10 @@ from app.api.tool_loop import parse_tool_calls, execute_guarded, append_tool_mes
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Shown to clients instead of raw exception text; details go to the server log.
+PUBLIC_ERROR_MESSAGE = "生成回复时出错，请稍后重试或检查服务器日志"
+MODEL_NOT_CONFIGURED_MESSAGE = "模型服务（{provider}）尚未配置或已停用，请先在服务器上完成模型配置"
+
 
 async def stream_chat_response(
     conversation: Conversation,
@@ -46,7 +50,7 @@ async def stream_chat_response(
         model_config = result.scalar_one_or_none()
 
         if not model_config or not model_config.enabled:
-            yield f"data: {json.dumps({'error': 'Model configuration not found or disabled'})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'error': MODEL_NOT_CONFIGURED_MESSAGE.format(provider=conversation.model_provider)})}\n\n"
             return
 
         # Decrypt API key
@@ -203,6 +207,8 @@ async def stream_chat_response(
         extra_metadata = {}
         if all_tool_calls:
             extra_metadata['tool_calls'] = all_tool_calls
+        if reasoning_content:
+            extra_metadata['reasoning'] = reasoning_content
 
         assistant_msg = Message(
             conversation_id=conversation.id,
@@ -226,10 +232,8 @@ async def stream_chat_response(
         yield f"data: {json.dumps({'type': 'done', 'message_id': assistant_msg.id, 'tokens': {'prompt': prompt_tokens, 'completion': completion_tokens, 'total': total_tokens}})}\n\n"
 
     except Exception as e:
-        logger.error(f"Streaming error: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
+        logger.exception(f"Streaming error: {str(e)}")
+        yield f"data: {json.dumps({'error': PUBLIC_ERROR_MESSAGE, 'type': 'error'})}\n\n"
 
 
 @router.post("/stream")
@@ -433,6 +437,8 @@ async def chat_complete(
             total_tokens=total_usage["total_tokens"],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Chat completion error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Chat completion error: {str(e)}")
+        raise HTTPException(status_code=500, detail=PUBLIC_ERROR_MESSAGE)

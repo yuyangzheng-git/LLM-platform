@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
-from loguru import logger
 
 from app.config import settings
 from app.database import init_db
@@ -13,6 +12,7 @@ logging.basicConfig(
     level=settings.LOG_LEVEL,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -46,6 +46,10 @@ app = FastAPI(
     version=settings.APP_VERSION,
     debug=settings.DEBUG,
     lifespan=lifespan,
+    # Interactive API docs are only exposed in debug mode
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
 )
 
 # Configure CORS
@@ -76,7 +80,7 @@ async def root():
         content={
             "message": "Welcome to LLM Chat Platform API",
             "version": settings.APP_VERSION,
-            "docs": "/docs",
+            "docs": app.docs_url,
         }
     )
 

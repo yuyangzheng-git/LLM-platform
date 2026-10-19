@@ -2,99 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light theme (default) - Warm & Cozy */
+/* Light theme (default) - Roots & Roads: cream paper, terracotta, river teal */
 :root {
-  /* Background colors - Warm cream tones */
-  --color-bg-primary: 254 252 247;
-  --color-bg-secondary: 255 255 255;
-  --color-bg-tertiary: 252 248 243;
+  /* Background colors - cream paper */
+  --color-bg-primary: 253 252 246;
+  --color-bg-secondary: 255 254 250;
+  --color-bg-tertiary: 244 240 230;
 
-  /* Text colors */
-  --color-text-primary: 41 37 36;
-  --color-text-secondary: 120 113 108;
-  --color-text-tertiary: 168 162 158;
+  /* Text colors - warm ink */
+  --color-text-primary: 42 40 38;
+  --color-text-secondary: 98 93 87;
+  --color-text-tertiary: 150 143 134;
 
   /* Border colors */
-  --color-border-primary: 245 235 225;
-  --color-border-secondary: 237 220 203;
+  --color-border-primary: 232 225 211;
+  --color-border-secondary: 218 208 190;
 
-  /* Gradient colors - Warm sunset palette */
-  --color-gradient-start: 251 146 60;
-  --color-gradient-mid: 251 113 133;
-  --color-gradient-end: 244 114 182;
+  /* Primary actions - terracotta */
+  --color-gradient-start: 197 95 81;
+  --color-gradient-mid: 207 108 93;
+  --color-gradient-end: 217 118 106;
 
-  /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(251, 146, 60, 0.2);
+  /* Glassmorphism - frosted cream over the painting */
+  --glass-bg: rgba(253, 252, 246, 0.78);
+  --glass-border: rgba(197, 95, 81, 0.18);
 
   /* Sidebar colors */
-  --color-sidebar-bg: rgba(255, 255, 255, 0.95);
-  --color-sidebar-hover: 254 249 242;
+  --color-sidebar-bg: rgba(253, 252, 246, 0.92);
+  --color-sidebar-hover: 246 241 230;
 
-  /* Message colors - Warm peach/coral */
-  --color-message-user-start: 251 146 60;
-  --color-message-user-mid: 251 113 133;
-  --color-message-user-end: 249 115 22;
-  --color-message-assistant-bg: rgba(255, 255, 255, 0.9);
+  /* Message colors - user in terracotta, assistant on paper */
+  --color-message-user-start: 197 95 81;
+  --color-message-user-mid: 205 105 90;
+  --color-message-user-end: 214 117 101;
+  --color-message-assistant-bg: rgba(253, 252, 246, 0.86);
 
   /* Code block colors */
-  --color-code-bg: 252 248 243;
-  --color-code-text: 41 37 36;
+  --color-code-bg: 244 240 230;
+  --color-code-text: 42 40 38;
 
   /* Accent colors */
-  --color-accent-warm: 251 146 60;
-  --color-accent-soft: 252 211 77;
+  --color-accent-warm: 197 95 81;
+  --color-accent-soft: 244 211 94;
+
+  /* Background painting wash: keeps text readable over the artwork */
+  --scene-wash-top: rgba(253, 252, 246, 0.25);
+  --scene-wash-bottom: rgba(253, 252, 246, 0.6);
+  --scene-filter: none;
 }
 
-/* Dark theme - Warm & Cozy */
+/* Dark theme - the same painting at dusk */
 [data-theme="dark"] {
-  /* Background colors - Deep warm tones */
-  --color-bg-primary: 28 25 23;
-  --color-bg-secondary: 41 37 36;
-  --color-bg-tertiary: 57 50 48;
+  /* Background colors - warm night */
+  --color-bg-primary: 27 25 23;
+  --color-bg-secondary: 36 33 30;
+  --color-bg-tertiary: 50 46 42;
 
   /* Text colors */
-  --color-text-primary: 254 250 245;
-  --color-text-secondary: 214 211 209;
-  --color-text-tertiary: 168 162 158;
+  --color-text-primary: 245 241 232;
+  --color-text-secondary: 205 198 186;
+  --color-text-tertiary: 150 143 134;
 
   /* Border colors */
-  --color-border-primary: 68 64 60;
-  --color-border-secondary: 87 83 78;
+  --color-border-primary: 66 61 56;
+  --color-border-secondary: 86 80 73;
 
-  /* Gradient colors - Golden warm glow */
-  --color-gradient-start: 251 191 36;
-  --color-gradient-mid: 251 146 60;
-  --color-gradient-end: 234 88 12;
+  /* Primary actions - terracotta stays warm at night */
+  --color-gradient-start: 197 95 81;
+  --color-gradient-mid: 207 108 93;
+  --color-gradient-end: 217 118 106;
 
   /* Glassmorphism */
-  --glass-bg: rgba(41, 37, 36, 0.85);
-  --glass-border: rgba(251, 191, 36, 0.2);
+  --glass-bg: rgba(36, 33, 30, 0.78);
+  --glass-border: rgba(138, 198, 209, 0.18);
 
   /* Sidebar colors */
-  --color-sidebar-bg: rgba(41, 37, 36, 0.95);
-  --color-sidebar-hover: 57 50 48;
+  --color-sidebar-bg: rgba(31, 29, 27, 0.94);
+  --color-sidebar-hover: 50 46 42;
 
   /* Message colors */
-  --color-message-user-start: 251 191 36;
-  --color-message-user-mid: 251 146 60;
-  --color-message-user-end: 234 88 12;
-  --color-message-assistant-bg: rgba(41, 37, 36, 0.9);
+  --color-message-user-start: 169 76 64;
+  --color-message-user-mid: 185 86 72;
+  --color-message-user-end: 197 95 81;
+  --color-message-assistant-bg: rgba(36, 33, 30, 0.86);
 
   /* Code block colors */
-  --color-code-bg: 57 50 48;
-  --color-code-text: 254 250 245;
+  --color-code-bg: 50 46 42;
+  --color-code-text: 245 241 232;
 
   /* Accent colors */
-  --color-accent-warm: 251 191 36;
-  --color-accent-soft: 253 224 71;
+  --color-accent-warm: 138 198 209;
+  --color-accent-soft: 244 211 94;
+
+  --scene-wash-top: rgba(22, 20, 18, 0.55);
+  --scene-wash-bottom: rgba(22, 20, 18, 0.8);
+  --scene-filter: saturate(0.85) brightness(0.8);
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  /* No rubber-band scroll or pull-to-refresh on the app shell */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  font-family: 'Nunito', ui-sans-serif, system-ui, -apple-system, 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: rgb(var(--color-bg-primary));
@@ -114,7 +133,7 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgb(var(--color-bg-tertiary));
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -136,4 +155,55 @@ code {
 /* Prevent transition on initial load */
 .no-transition * {
   transition: none !important;
+}
+
+/* Paper grain laid over the painting, as on Roots & Roads */
+.paper-texture {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  mix-blend-mode: multiply;
+}
+
+[data-theme="dark"] .paper-texture {
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Visible viewport height, kept in sync with the on-screen keyboard by
+   useAppHeight(); falls back to dynamic viewport units. */
+.app-height {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+}
+
+/* iOS zooms into any form field under 16px when it gets focus */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Comfortable tap targets (44px) wherever the pointer is a finger */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Scroll areas keep their own momentum and do not drag the page */
+.scroll-area {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }

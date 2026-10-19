@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Loader2, CheckCircle, XCircle, ExternalLink, Clock, MapPin, Globe } from 'lucide-react';
 
 const ToolCallDisplay = ({ toolCalls }) => {
@@ -69,28 +68,25 @@ const ToolCallItem = ({ toolCall }) => {
     return name;
   };
 
-  const getToolColor = () => {
+  // Full class names (not built from strings) so Tailwind generates them
+  const getToolStyle = () => {
     if (name === 'web_search') {
-      return 'blue';
+      return 'bg-road-50/80 dark:bg-road-900/25 border-road-200 dark:border-road-800';
     }
     if (name === 'get_current_datetime') {
-      return 'purple';
+      return 'bg-sun-100/60 dark:bg-sun-600/10 border-sun-300/70 dark:border-sun-600/30';
     }
     if (name === 'geocode_address' || name === 'reverse_geocode') {
-      return 'green';
+      return 'bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800';
     }
     if (name === 'analyze_website') {
-      return 'orange';
+      return 'bg-roots-50/80 dark:bg-roots-900/25 border-roots-200 dark:border-roots-800';
     }
-    return 'blue';
+    return 'bg-bg-tertiary/60 border-border-primary';
   };
 
-  const color = getToolColor();
-  const bgClass = `bg-${color}-50 dark:bg-${color}-900/10`;
-  const borderClass = `border-${color}-200 dark:border-${color}-800`;
-
   return (
-    <div className={`${bgClass} rounded-lg p-4 border ${borderClass}`}>
+    <div className={`${getToolStyle()} rounded-2xl p-4 border`}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-2">
         {getToolIcon()}
@@ -365,7 +361,7 @@ const WebsiteAnalysisResults = ({ result }) => {
             href={final_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 break-all"
+            className="text-sm text-roots-600 dark:text-roots-400 hover:underline flex items-center gap-1 break-all"
           >
             {final_url}
             <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -411,7 +407,7 @@ const WebsiteAnalysisResults = ({ result }) => {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1"
+                  className="text-roots-600 dark:text-roots-400 hover:underline flex items-center gap-1"
                 >
                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                   <span className="truncate">{link.text}</span>

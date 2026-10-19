@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useToast } from '../../hooks/custom/useToast'
+import { downloadFile } from '../../utils/download'
 import { Video, Download, Loader2, Play } from 'lucide-react'
 import { VIDEO_MODELS } from '../../config/generationModels'
 
 export function VideoGeneration() {
+  const { showToast } = useToast()
   const [prompt, setPrompt] = useState('')
   const [selectedModel, setSelectedModel] = useState('sora-2')
   const [duration, setDuration] = useState('5s')
@@ -32,41 +35,42 @@ export function VideoGeneration() {
       })
 
       if (!response.ok) {
-        throw new Error(`生成失败: ${response.status}`)
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.detail || `HTTP ${response.status}`)
       }
 
       const data = await response.json()
-      setGeneratedVideos([data, ...generatedVideos])
+      setGeneratedVideos((prev) => [data, ...prev])
     } catch (error) {
       console.error('Video generation error:', error)
-      alert('视频生成失败: ' + error.message)
+      showToast(`视频生成失败：${error.message}`)
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleDownload = (videoUrl, index) => {
-    const link = document.createElement('a')
-    link.href = videoUrl
-    link.download = `generated-video-${Date.now()}-${index}.mp4`
-    link.click()
+  const handleDownload = async (videoUrl, index) => {
+    const result = await downloadFile(videoUrl, `generated-video-${Date.now()}-${index}.mp4`)
+    if (result === 'opened') {
+      showToast('已在新标签页打开，可在那里保存文件', 'info')
+    }
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="scroll-area h-full overflow-y-auto pb-[env(safe-area-inset-bottom)]">
       {/* Input Area */}
-      <div className="flex-shrink-0 p-4 sm:p-6 md:p-8 bg-white/50 dark:bg-bg-secondary/50 backdrop-blur-xl border-b border-border-primary">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="px-3 pt-3 sm:px-6 sm:pt-6 md:px-8 md:pt-8">
+        <div className="max-w-4xl mx-auto space-y-4 bg-glass backdrop-blur-xl border border-border-primary/80 rounded-[1.75rem] shadow-paper p-4 sm:p-6">
           {/* Prompt Input */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
+            <label className="block text-sm font-display font-semibold text-text-primary mb-2">
               视频描述提示词
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="描述你想生成的视频场景，越详细越好..."
-              className="w-full px-4 py-3 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-xl focus:border-orange-400 dark:focus:border-amber-400 outline-none resize-none text-text-primary placeholder-text-tertiary"
+              className="w-full px-4 py-3 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none resize-none text-text-primary placeholder-text-tertiary"
               rows={3}
             />
           </div>
@@ -75,7 +79,7 @@ export function VideoGeneration() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Model Select */}
             <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-display font-semibold text-text-primary mb-2">
                 模型
               </label>
               <select
@@ -89,7 +93,7 @@ export function VideoGeneration() {
                     if (model.aspectRatios.length > 0) setAspectRatio(model.aspectRatios[0])
                   }
                 }}
-                className="w-full px-3 py-2 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-lg focus:border-orange-400 dark:focus:border-amber-400 outline-none text-text-primary"
+                className="w-full px-3 py-2 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none text-text-primary"
               >
                 {VIDEO_MODELS.map((model) => (
                   <option key={model.id} value={model.id}>
@@ -101,13 +105,13 @@ export function VideoGeneration() {
 
             {/* Duration Select */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-display font-semibold text-text-primary mb-2">
                 时长
               </label>
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-lg focus:border-orange-400 dark:focus:border-amber-400 outline-none text-text-primary"
+                className="w-full px-3 py-2 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none text-text-primary"
               >
                 {currentModel?.durations.map((d) => (
                   <option key={d} value={d}>{d}</option>
@@ -117,13 +121,13 @@ export function VideoGeneration() {
 
             {/* Resolution Select */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-display font-semibold text-text-primary mb-2">
                 分辨率
               </label>
               <select
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-lg focus:border-orange-400 dark:focus:border-amber-400 outline-none text-text-primary"
+                className="w-full px-3 py-2 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none text-text-primary"
               >
                 {currentModel?.resolutions.map((r) => (
                   <option key={r} value={r}>{r}</option>
@@ -133,13 +137,13 @@ export function VideoGeneration() {
 
             {/* Aspect Ratio Select */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-display font-semibold text-text-primary mb-2">
                 宽高比
               </label>
               <select
                 value={aspectRatio}
                 onChange={(e) => setAspectRatio(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-lg focus:border-orange-400 dark:focus:border-amber-400 outline-none text-text-primary"
+                className="w-full px-3 py-2 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none text-text-primary"
               >
                 {currentModel?.aspectRatios.map((ar) => (
                   <option key={ar} value={ar}>{ar}</option>
@@ -153,7 +157,7 @@ export function VideoGeneration() {
             <button
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}
-              className="px-8 py-3 bg-gradient-main hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium flex items-center justify-center space-x-2 transition-all shadow-lg hover:shadow-xl"
+              className="px-8 py-3 bg-roots-500 hover:bg-roots-600 disabled:bg-border-secondary/70 disabled:text-text-tertiary dark:disabled:bg-bg-tertiary disabled:cursor-not-allowed text-cream rounded-full font-display font-semibold flex items-center justify-center space-x-2 transition-all shadow-glow-roots disabled:shadow-none"
             >
               {isGenerating ? (
                 <>
@@ -172,20 +176,22 @@ export function VideoGeneration() {
       </div>
 
       {/* Gallery Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+      <div className="p-3 sm:p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
           {generatedVideos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="flex flex-col items-center justify-center text-center py-8 md:py-16">
+              <div className="bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md rounded-[1.75rem] px-10 py-8 shadow-paper border border-border-primary/70 flex flex-col items-center">
               <Play className="w-20 h-20 text-text-tertiary mb-4" />
-              <p className="text-text-secondary text-lg font-medium">还没有生成视频</p>
-              <p className="text-text-tertiary text-sm mt-2">输入提示词开始创作吧</p>
+              <p className="font-display text-text-primary text-lg font-semibold">还没有生成视频</p>
+              <p className="text-text-secondary text-sm mt-2">输入提示词开始创作吧</p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {generatedVideos.map((vid, index) => (
                 <div
                   key={index}
-                  className="group bg-white dark:bg-bg-secondary rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-border-primary"
+                  className="group bg-glass backdrop-blur-xl rounded-[1.5rem] overflow-hidden shadow-paper hover:shadow-xl hover:-translate-y-0.5 transition-all border border-border-primary/80"
                 >
                   <div className="relative aspect-video bg-black">
                     <video
@@ -196,10 +202,10 @@ export function VideoGeneration() {
                     >
                       您的浏览器不支持视频播放
                     </video>
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-all">
                       <button
                         onClick={() => handleDownload(vid.url, index)}
-                        className="px-3 py-2 bg-white text-gray-900 rounded-lg font-medium flex items-center space-x-2 shadow-lg hover:bg-gray-100 transition-all text-sm"
+                        className="touch-target px-3 py-2 bg-cream/95 text-ink rounded-full font-display font-semibold flex items-center space-x-2 shadow-paper hover:bg-cream transition-all text-sm"
                       >
                         <Download className="w-4 h-4" />
                         <span>下载</span>

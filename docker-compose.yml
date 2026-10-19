@@ -31,6 +31,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Baked in at build time. Empty = same origin; the frontend's nginx
+        # proxies /api to the backend.
+        - VITE_API_BASE_URL=
     container_name: llm-chat-frontend
     ports:
       - "3212:3212"
@@ -39,8 +43,6 @@ services:
     restart: unless-stopped
     networks:
       - llm-chat-network
-    environment:
-      - VITE_API_BASE_URL=http://your-server-ip:3211
 
   # SearxNG已替换为DuckDuckGo HTML搜索（无需Docker依赖）
   # 如需使用SearxNG，取消下面注释

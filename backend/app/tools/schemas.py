@@ -2,7 +2,7 @@
 Tool definition schemas for function calling
 """
 from typing import Dict, Any, List, Optional, Callable, Awaitable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from enum import Enum
 
 
@@ -34,8 +34,7 @@ class ToolDefinition(BaseModel):
     parameters: List[ToolParameter] = Field(default_factory=list)
     function: Optional[Callable[..., Awaitable[Any]]] = Field(None, exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_openai_format(self) -> Dict[str, Any]:
         """Convert to OpenAI function calling format"""

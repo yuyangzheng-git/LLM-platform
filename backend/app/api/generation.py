@@ -86,9 +86,11 @@ async def generate_image(
             size=request.size
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Image generation error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Image generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="图片生成失败，请检查服务器日志")
 
 
 @router.post("/video", response_model=GenerationResponse)
@@ -154,6 +156,8 @@ async def generate_video(
             resolution=request.resolution
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Video generation error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Video generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="视频生成失败，请检查服务器日志")

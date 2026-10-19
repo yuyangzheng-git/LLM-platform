@@ -213,6 +213,34 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/llmchat
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+### Schema Migrations (Alembic)
+
+The backend applies pending [Alembic](https://alembic.sqlalchemy.org/)
+migrations from `backend/migrations/` on startup. A database created by an
+older version (before migrations existed) is detected and adopted
+automatically, so no manual step is needed when upgrading.
+
+After changing a model in `backend/app/models/`, generate a migration:
+
+```bash
+cd backend
+alembic revision --autogenerate -m "describe the change"
+```
+
+Review the generated file before committing it.
+
+### Dependencies
+
+`backend/requirements.txt` lists direct dependencies with minimum versions;
+`backend/requirements.lock` pins every package and is what Docker and CI
+install. After editing `requirements.txt`, regenerate the lock with
+[uv](https://docs.astral.sh/uv/):
+
+```bash
+cd backend
+uv pip compile requirements.txt --universal --python-version 3.12 -o requirements.lock
+```
+
 ## Project Structure
 
 ```
@@ -243,7 +271,9 @@ llm-chat-platform/
 
 ## API Documentation
 
-Once running, visit http://localhost:3212/docs for interactive API documentation.
+Interactive API docs (`/docs`, `/openapi.json`) are only served by the backend
+when `DEBUG=true`. Run the backend locally in debug mode and visit
+http://localhost:3211/docs.
 
 ### Key Endpoints
 
@@ -317,8 +347,8 @@ service (no API keys or network calls required).
 
 ```bash
 cd backend
-pip install -r requirements.txt pytest
-python -m pytest tests/ -v
+pip install -r requirements.lock pytest pytest-asyncio
+python -m pytest -v
 ```
 
 Coverage:

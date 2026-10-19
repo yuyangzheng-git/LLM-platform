@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 104857600  # 100MB (increased from 10MB)
+    # Deprecated: not used for validation. Uploads are checked by file
+    # extension in app/utils/file_validator.py. Kept so existing .env files
+    # that still set it keep loading.
     ALLOWED_FILE_TYPES: Union[List[str], str] = [
         # Images
         "image/png",

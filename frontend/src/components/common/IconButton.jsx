@@ -8,7 +8,7 @@ export function IconButton({
   className = '',
   ...props
 }) {
-  const baseClasses = 'inline-flex items-center justify-center rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2'
+  const baseClasses = 'touch-target inline-flex items-center justify-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-roots-300 focus-visible:ring-offset-2'
 
   const sizeClasses = {
     sm: 'p-1.5',
@@ -23,7 +23,7 @@ export function IconButton({
   }
 
   const variantClasses = {
-    default: 'bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-md hover:bg-white/90 dark:hover:bg-bg-secondary shadow-lg hover:shadow-xl border border-glass',
+    default: 'bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md hover:bg-cream/90 dark:hover:bg-bg-secondary shadow-paper hover:shadow-lg border border-glass',
     primary: 'bg-gradient-main text-white hover:shadow-2xl hover:scale-105',
     ghost: 'hover:bg-bg-tertiary/50',
     danger: 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400',
