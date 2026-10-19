@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Menu } from 'lucide-react'
 import { ConversationSidebar } from './ConversationSidebar'
 import { MainChatArea } from './MainChatArea'
-import { ChatHeader } from './ChatHeader'
 import { IconButton } from '../common/IconButton'
 import { conversationAPI } from '../../services/conversationAPI'
 import { fileAPI } from '../../services/fileAPI'
@@ -29,8 +28,6 @@ export function UnifiedChatInterface() {
 
   // Model State - 默认使用GPT-4o
   const [selectedModel, setSelectedModel] = useState('gpt-4o')
-
-  const fileInputRef = useRef(null)
 
   // Load initial data
   useEffect(() => {
@@ -272,19 +269,6 @@ export function UnifiedChatInterface() {
       console.error('Failed to delete conversation:', err)
       alert('删除对话失败，请重试')
     }
-  }
-
-  const exportConversation = (format) => {
-    if (!conversationId || messages.length === 0) return
-
-    const content = messages.map((m) => `${m.role.toUpperCase()}:\n${m.content}\n\n`).join('')
-    const blob = new Blob([content], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `conversation-${conversationId}.${format}`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   return (
