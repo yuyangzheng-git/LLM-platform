@@ -4,6 +4,8 @@ import { UnifiedChatInterface } from './components/unified/UnifiedChatInterface'
 import { ImageGeneration } from './components/generation/ImageGeneration'
 import { VideoGeneration } from './components/generation/VideoGeneration'
 import { ThemeToggle } from './components/common/ThemeToggle'
+import { SceneBackground, RainbowRoad } from './components/common/SceneBackground'
+import { BrandTitle } from './components/common/BrandTitle'
 
 function App() {
   const [activeTab, setActiveTab] = useState('chat') // 'chat', 'image', 'video'
@@ -16,22 +18,17 @@ function App() {
   ]
 
   return (
-    <div className="h-screen h-[100dvh] bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 dark:from-stone-900 dark:via-amber-950 dark:to-orange-950 flex flex-col overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-orange-400/10 to-rose-400/10 dark:from-amber-600/5 dark:to-orange-600/5 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-amber-400/10 to-pink-400/10 dark:from-yellow-600/5 dark:to-rose-600/5 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
-      </div>
+    <div className="relative isolate h-screen h-[100dvh] flex flex-col overflow-hidden text-text-primary">
+      <SceneBackground />
+      <RainbowRoad />
 
       {/* Top Navigation Bar */}
-      <div className="relative z-20 flex-shrink-0 bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-xl border-b border-border-primary shadow-lg">
+      <div className="relative z-20 flex-shrink-0 bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-xl border-b border-border-primary/70 shadow-paper">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl font-black bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 bg-clip-text text-transparent">
-                Zachary&apos;s LLM
-              </div>
+            <div className="flex items-center">
+              <BrandTitle className="text-2xl sm:text-[1.7rem]" />
             </div>
 
             {/* Desktop Navigation */}
@@ -42,10 +39,10 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-all ${
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full font-display font-semibold transition-all ${
                       activeTab === tab.id
-                        ? 'bg-gradient-main text-white shadow-lg'
-                        : 'text-text-primary hover:bg-bg-tertiary'
+                        ? 'bg-roots-500 text-cream shadow-glow-roots'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary/70'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -53,17 +50,17 @@ function App() {
                   </button>
                 )
               })}
-              <ThemeToggle className="ml-2 bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass" />
+              <ThemeToggle className="ml-2 bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-paper hover:shadow-lg border border-glass" />
             </div>
 
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center space-x-2">
-              <ThemeToggle className="bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass" />
+              <ThemeToggle className="bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass" />
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label="切换功能菜单"
                 aria-expanded={isMobileMenuOpen}
-                className="p-2 rounded-lg bg-white/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass"
+                className="p-2 rounded-lg bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md shadow-lg hover:shadow-xl border border-glass"
               >
                 <Menu className="w-6 h-6 text-text-primary" />
               </button>
@@ -82,10 +79,10 @@ function App() {
                       setActiveTab(tab.id)
                       setIsMobileMenuOpen(false)
                     }}
-                    className={`w-full flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all ${
+                    className={`w-full flex items-center space-x-2 px-4 py-3 rounded-full font-display font-semibold transition-all ${
                       activeTab === tab.id
-                        ? 'bg-gradient-main text-white shadow-lg'
-                        : 'bg-white/50 dark:bg-bg-secondary/50 text-text-primary hover:bg-bg-tertiary'
+                        ? 'bg-roots-500 text-cream shadow-glow-roots'
+                        : 'bg-cream/60 dark:bg-bg-secondary/50 text-text-primary hover:bg-bg-tertiary'
                     }`}
                   >
                     <Icon className="w-5 h-5" />

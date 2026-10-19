@@ -61,7 +61,7 @@ export function ConversationSidebar({
                 key={conv.id}
                 className={`group relative w-full rounded-2xl transition-all ${
                   conv.id === currentConversationId
-                    ? 'bg-orange-50 dark:bg-amber-900/20 border-2 border-orange-300 dark:border-amber-400 shadow-lg'
+                    ? 'bg-roots-50 dark:bg-road-900/20 border-2 border-roots-300 dark:border-road-400 shadow-lg'
                     : 'hover:bg-bg-tertiary border-2 border-transparent hover:shadow-md'
                 }`}
               >

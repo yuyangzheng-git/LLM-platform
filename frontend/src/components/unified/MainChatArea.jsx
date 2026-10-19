@@ -121,10 +121,10 @@ export function MainChatArea({
     >
       {/* Drag overlay */}
       {isDragging && (
-        <div className="absolute inset-0 bg-orange-500/10 dark:bg-amber-500/10 backdrop-blur-sm border-4 border-dashed border-orange-400 dark:border-amber-400 rounded-2xl z-50 flex items-center justify-center animate-fadeIn pointer-events-none">
+        <div className="absolute inset-0 bg-roots-500/10 dark:bg-road-500/10 backdrop-blur-sm border-4 border-dashed border-roots-400 dark:border-road-400 rounded-2xl z-50 flex items-center justify-center animate-fadeIn pointer-events-none">
           <div className="text-center">
-            <Upload className="w-16 h-16 mx-auto mb-4 text-orange-500 dark:text-amber-400 animate-bounce" />
-            <p className="text-xl font-bold text-orange-600 dark:text-amber-400">拖放文件到这里上传</p>
+            <Upload className="w-16 h-16 mx-auto mb-4 text-roots-500 dark:text-road-400 animate-bounce" />
+            <p className="text-xl font-bold text-roots-600 dark:text-road-400">拖放文件到这里上传</p>
             <p className="text-sm text-text-secondary mt-2">支持图片、PDF、文档等格式</p>
           </div>
         </div>
@@ -157,7 +157,7 @@ export function MainChatArea({
             <div className="relative">
               <button
                 onClick={jumpToLatest}
-                className="absolute left-1/2 -translate-x-1/2 -top-14 z-10 flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/90 dark:bg-bg-secondary/90 border border-border-primary shadow-lg text-sm text-text-primary hover:shadow-xl animate-fadeIn"
+                className="absolute left-1/2 -translate-x-1/2 -top-14 z-10 flex items-center gap-1.5 px-3 py-2 rounded-full bg-cream/90 dark:bg-bg-secondary/90 border border-border-primary shadow-lg text-sm text-text-primary hover:shadow-xl animate-fadeIn"
               >
                 <ArrowDown className="w-4 h-4" />
                 <span>回到最新</span>
@@ -166,7 +166,7 @@ export function MainChatArea({
           )}
 
           {/* Input Area - Fixed at bottom */}
-          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 lg:px-8 py-3 md:py-4 lg:py-6 bg-bg-secondary/50 dark:bg-bg-secondary/30 border-t border-border-primary">
+          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 lg:px-8 pt-2 pb-4 md:pb-6">
             <div className="max-w-4xl mx-auto">{chatInput}</div>
           </div>
         </>

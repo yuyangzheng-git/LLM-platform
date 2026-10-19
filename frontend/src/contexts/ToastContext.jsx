@@ -42,7 +42,7 @@ export function ToastProvider({ children }) {
             <div
               key={toast.id}
               role={toast.type === 'error' ? 'alert' : 'status'}
-              className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border bg-white/95 dark:bg-bg-secondary/95 backdrop-blur-xl shadow-xl animate-fadeIn ${STYLES[toast.type] || STYLES.info}`}
+              className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border bg-cream/95 dark:bg-bg-secondary/95 backdrop-blur-xl shadow-xl animate-fadeIn ${STYLES[toast.type] || STYLES.info}`}
             >
               <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p className="flex-1 text-sm font-medium break-words">{toast.message}</p>

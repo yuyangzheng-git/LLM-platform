@@ -245,7 +245,7 @@ export function UnifiedChatInterface() {
       {/* Main Content */}
       <div className="flex-1 min-w-0 flex flex-col h-full">
         {/* Top Bar */}
-        <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 flex items-center justify-between bg-white/50 dark:bg-bg-secondary/50 backdrop-blur-xl border-b border-border-primary">
+        <div className="flex-shrink-0 px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <IconButton icon={History} onClick={openSidebar} label="对话历史" />
           </div>
@@ -253,12 +253,13 @@ export function UnifiedChatInterface() {
           <div className="flex items-center min-w-0 space-x-2 md:space-x-3">
             {isStarted && selectedModel && (
               <div
-                className="min-w-0 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 px-3 sm:px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl border border-orange-300/50 dark:border-amber-400/30"
+                className="min-w-0 flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-cream/80 dark:bg-bg-secondary/80 border border-road-200 dark:border-road-700/60 shadow-paper"
                 title="当前对话使用的模型"
               >
-                <div className="truncate text-xs sm:text-sm font-semibold bg-gradient-to-r from-orange-600 via-amber-600 to-rose-600 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 bg-clip-text text-transparent whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-road-400 flex-shrink-0" />
+                <span className="truncate text-xs sm:text-sm font-display font-semibold text-road-700 dark:text-road-200 whitespace-nowrap">
                   {modelDisplayName(selectedModel)}
-                </div>
+                </span>
               </div>
             )}
           </div>

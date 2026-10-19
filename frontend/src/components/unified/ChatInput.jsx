@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { Send, Paperclip, X, Sparkles, Square, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Send, Paperclip, X, ChevronDown, Square, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { TOP_MODELS } from '../../config/models'
 import { isImeEnter } from './chatState'
 
@@ -11,10 +11,10 @@ function AttachmentChip({ attachment, onRemove }) {
   const { file, status, progress, error } = attachment
   return (
     <div
-      className={`relative bg-orange-500/10 dark:bg-amber-500/10 backdrop-blur-sm border-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium flex flex-col flex-shrink-0 w-[200px] max-w-full ${
+      className={`relative bg-roots-500/10 dark:bg-road-500/10 backdrop-blur-sm border-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium flex flex-col flex-shrink-0 w-[200px] max-w-full ${
         status === 'error'
           ? 'border-red-300 dark:border-red-500/50 text-red-700 dark:text-red-300'
-          : 'border-orange-200 dark:border-amber-400/50 text-orange-700 dark:text-amber-300'
+          : 'border-roots-200 dark:border-road-400/50 text-roots-700 dark:text-road-300'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -35,7 +35,7 @@ function AttachmentChip({ attachment, onRemove }) {
         <div className="mt-1.5">
           <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300 ease-out"
+              className="h-full bg-gradient-to-r from-roots-500 to-road-500 transition-all duration-300 ease-out"
               style={{ width: `${progress || 0}%` }}
             />
           </div>
@@ -117,11 +117,11 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 bg-white/90 dark:bg-bg-secondary/90 backdrop-blur-xl rounded-2xl md:rounded-[2rem] p-2 sm:p-3 md:p-4 border-2 border-border-primary focus-within:border-orange-400 dark:focus-within:border-amber-400 focus-within:shadow-2xl transition-all shadow-xl hover:shadow-2xl">
+      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 bg-cream/90 dark:bg-bg-secondary/90 backdrop-blur-xl rounded-[1.75rem] pl-3 pr-2 py-2 sm:pl-4 sm:py-2.5 border border-border-primary focus-within:border-roots-300 dark:focus-within:border-road-500 focus-within:ring-4 focus-within:ring-roots-100/70 dark:focus-within:ring-road-900/40 transition-all shadow-paper">
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isSending}
-          className="p-1.5 md:p-2 text-text-secondary hover:bg-gradient-main hover:text-white rounded-lg md:rounded-xl transition-all flex-shrink-0 disabled:opacity-50"
+          className="p-1.5 md:p-2 text-text-secondary hover:bg-roots-50 hover:text-roots-600 dark:hover:bg-roots-900/30 dark:hover:text-roots-300 rounded-full transition-all flex-shrink-0 disabled:opacity-50"
           title="上传文件"
           aria-label="上传文件"
         >
@@ -156,7 +156,7 @@ export function ChatInput({
             value={selectedModel}
             onChange={(e) => onModelChange && onModelChange(e.target.value)}
             disabled={modelLocked}
-            className="w-full appearance-none truncate bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 text-text-primary px-2 sm:px-3 py-1.5 sm:py-2 pr-6 sm:pr-8 rounded-lg md:rounded-xl text-xs sm:text-sm font-medium border border-orange-300/50 dark:border-amber-400/30 hover:shadow-lg transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 dark:focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:shadow-none"
+            className="w-full appearance-none truncate bg-road-50 dark:bg-road-900/40 text-road-700 dark:text-road-200 px-3 py-1.5 sm:py-2 pr-7 sm:pr-8 rounded-full text-xs sm:text-sm font-display font-semibold border border-road-200 dark:border-road-700/60 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-road-300 disabled:cursor-not-allowed disabled:opacity-75"
             title={modelLocked ? '对话的模型已固定，新建对话可切换模型' : '选择模型'}
             aria-label="选择模型"
           >
@@ -166,13 +166,13 @@ export function ChatInput({
               </option>
             ))}
           </select>
-          <Sparkles className="w-3 h-3 md:w-4 md:h-4 absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 text-orange-500 dark:text-amber-400 pointer-events-none" />
+          <ChevronDown className="w-3.5 h-3.5 absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 text-road-500 dark:text-road-300 pointer-events-none" />
         </div>
 
         {isSending ? (
           <button
             onClick={onStop}
-            className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-stone-700 hover:bg-stone-800 dark:bg-stone-200 dark:hover:bg-white text-white dark:text-stone-900 rounded-lg md:rounded-xl flex items-center justify-center transition-all shadow-lg flex-shrink-0"
+            className="w-9 h-9 md:w-10 md:h-10 bg-ink hover:bg-ink/85 dark:bg-cream dark:hover:bg-cream/85 text-cream dark:text-ink rounded-full flex items-center justify-center transition-all shadow-paper flex-shrink-0"
             title="停止生成"
             aria-label="停止生成"
           >
@@ -182,7 +182,7 @@ export function ChatInput({
           <button
             onClick={onSend}
             disabled={!canSend}
-            className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-main hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg md:rounded-xl flex items-center justify-center transition-all shadow-lg hover:shadow-xl hover:scale-105 disabled:shadow-none disabled:scale-100 flex-shrink-0"
+            className="w-9 h-9 md:w-10 md:h-10 bg-roots-500 hover:bg-roots-600 disabled:bg-border-secondary/70 disabled:text-text-tertiary dark:disabled:bg-bg-tertiary disabled:cursor-not-allowed text-cream rounded-full flex items-center justify-center transition-all shadow-glow-roots hover:-translate-y-0.5 disabled:shadow-none disabled:translate-y-0 flex-shrink-0"
             title="发送消息 (Enter)"
             aria-label="发送消息"
           >
@@ -191,9 +191,9 @@ export function ChatInput({
         )}
       </div>
 
-      <p className="hidden md:block text-xs text-text-tertiary mt-3 md:mt-4 text-center font-medium">
-        按 <kbd className="px-1.5 md:px-2 py-0.5 md:py-1 bg-bg-tertiary rounded text-text-secondary text-xs">Enter</kbd> 发送，
-        <kbd className="px-1.5 md:px-2 py-0.5 md:py-1 bg-bg-tertiary rounded text-text-secondary text-xs">Shift + Enter</kbd> 换行
+      <p className="hidden md:block text-xs text-text-secondary mt-3 text-center font-medium">
+        按 <kbd className="px-1.5 md:px-2 py-0.5 md:py-1 bg-cream/70 dark:bg-bg-tertiary border border-border-primary rounded text-text-secondary text-xs">Enter</kbd> 发送，
+        <kbd className="px-1.5 md:px-2 py-0.5 md:py-1 bg-cream/70 dark:bg-bg-tertiary border border-border-primary rounded text-text-secondary text-xs">Shift + Enter</kbd> 换行
       </p>
     </div>
   )

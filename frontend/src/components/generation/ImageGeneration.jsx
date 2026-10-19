@@ -55,18 +55,18 @@ export function ImageGeneration() {
   return (
     <div className="h-full flex flex-col">
       {/* Input Area */}
-      <div className="flex-shrink-0 p-4 sm:p-6 md:p-8 bg-white/50 dark:bg-bg-secondary/50 backdrop-blur-xl border-b border-border-primary">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="flex-shrink-0 px-3 pt-4 sm:px-6 sm:pt-6 md:px-8 md:pt-8">
+        <div className="max-w-4xl mx-auto space-y-4 bg-glass backdrop-blur-xl border border-border-primary/80 rounded-[1.75rem] shadow-paper p-4 sm:p-6">
           {/* Prompt Input */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
+            <label className="block text-sm font-display font-semibold text-text-primary mb-2">
               图片描述提示词
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="描述你想生成的图片，越详细越好..."
-              className="w-full px-4 py-3 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-xl focus:border-orange-400 dark:focus:border-amber-400 outline-none resize-none text-text-primary placeholder-text-tertiary"
+              className="w-full px-4 py-3 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none resize-none text-text-primary placeholder-text-tertiary"
               rows={3}
             />
           </div>
@@ -75,7 +75,7 @@ export function ImageGeneration() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Model Select */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-display font-semibold text-text-primary mb-2">
                 模型
               </label>
               <select
@@ -87,7 +87,7 @@ export function ImageGeneration() {
                     setSize(model.sizes[0])
                   }
                 }}
-                className="w-full px-3 py-2 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-lg focus:border-orange-400 dark:focus:border-amber-400 outline-none text-text-primary"
+                className="w-full px-3 py-2 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none text-text-primary"
               >
                 {IMAGE_MODELS.map((model) => (
                   <option key={model.id} value={model.id}>
@@ -99,13 +99,13 @@ export function ImageGeneration() {
 
             {/* Size Select */}
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-display font-semibold text-text-primary mb-2">
                 尺寸
               </label>
               <select
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-bg-tertiary border-2 border-border-primary rounded-lg focus:border-orange-400 dark:focus:border-amber-400 outline-none text-text-primary"
+                className="w-full px-3 py-2 bg-cream/80 dark:bg-bg-tertiary/80 border border-border-primary rounded-2xl focus:border-roots-300 focus:ring-4 focus:ring-roots-100/70 dark:focus:border-road-500 dark:focus:ring-road-900/40 outline-none text-text-primary"
               >
                 {currentModel?.sizes.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -118,7 +118,7 @@ export function ImageGeneration() {
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim()}
-                className="w-full px-6 py-2 bg-gradient-main hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium flex items-center justify-center space-x-2 transition-all shadow-lg hover:shadow-xl"
+                className="w-full px-6 py-2 bg-roots-500 hover:bg-roots-600 disabled:bg-border-secondary/70 disabled:text-text-tertiary dark:disabled:bg-bg-tertiary disabled:cursor-not-allowed text-cream rounded-full font-display font-semibold flex items-center justify-center space-x-2 transition-all shadow-glow-roots disabled:shadow-none"
               >
                 {isGenerating ? (
                   <>
@@ -141,17 +141,19 @@ export function ImageGeneration() {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
         <div className="max-w-6xl mx-auto">
           {generatedImages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="flex flex-col items-center justify-center h-full text-center py-16">
+              <div className="bg-cream/70 dark:bg-bg-secondary/70 backdrop-blur-md rounded-[1.75rem] px-10 py-8 shadow-paper border border-border-primary/70 flex flex-col items-center">
               <ImageIcon className="w-20 h-20 text-text-tertiary mb-4" />
-              <p className="text-text-secondary text-lg font-medium">还没有生成图片</p>
-              <p className="text-text-tertiary text-sm mt-2">输入提示词开始创作吧</p>
+              <p className="font-display text-text-primary text-lg font-semibold">还没有生成图片</p>
+              <p className="text-text-secondary text-sm mt-2">输入提示词开始创作吧</p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {generatedImages.map((img, index) => (
                 <div
                   key={index}
-                  className="group bg-white dark:bg-bg-secondary rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-border-primary"
+                  className="group bg-glass backdrop-blur-xl rounded-[1.5rem] overflow-hidden shadow-paper hover:shadow-xl hover:-translate-y-0.5 transition-all border border-border-primary/80"
                 >
                   <div className="relative aspect-square">
                     <img
@@ -162,7 +164,7 @@ export function ImageGeneration() {
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <button
                         onClick={() => handleDownload(img.url, index)}
-                        className="px-4 py-2 bg-white text-gray-900 rounded-lg font-medium flex items-center space-x-2 shadow-lg hover:bg-gray-100 transition-all"
+                        className="px-4 py-2 bg-cream text-gray-900 rounded-lg font-medium flex items-center space-x-2 shadow-lg hover:bg-gray-100 transition-all"
                       >
                         <Download className="w-4 h-4" />
                         <span>下载</span>

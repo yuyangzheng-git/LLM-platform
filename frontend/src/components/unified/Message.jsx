@@ -70,7 +70,7 @@ const createMarkdownComponents = (theme) => ({
   },
   blockquote({ children }) {
     return (
-      <blockquote className="border-l-4 border-orange-500 dark:border-amber-400 pl-4 py-2 my-4 bg-orange-50 dark:bg-amber-900/20 rounded-r-lg break-words overflow-wrap-anywhere">
+      <blockquote className="border-l-4 border-roots-500 dark:border-road-400 pl-4 py-2 my-4 bg-roots-50 dark:bg-road-900/20 rounded-r-lg break-words overflow-wrap-anywhere">
         {children}
       </blockquote>
     )
@@ -86,7 +86,7 @@ const createMarkdownComponents = (theme) => ({
   },
   thead({ children }) {
     return (
-      <thead className="bg-orange-100 dark:bg-amber-900/30">
+      <thead className="bg-roots-100 dark:bg-road-900/30">
         {children}
       </thead>
     )
@@ -112,16 +112,16 @@ const createMarkdownComponents = (theme) => ({
     )
   },
   h1({ children }) {
-    return <h1 className="text-3xl font-bold mb-4 mt-6 first:mt-0 text-gradient-primary">{children}</h1>
+    return <h1 className="font-display text-2xl md:text-3xl font-bold mb-4 mt-6 first:mt-0 text-roots-600 dark:text-roots-300">{children}</h1>
   },
   h2({ children }) {
-    return <h2 className="text-2xl font-bold mb-3 mt-5 first:mt-0 text-gradient-primary">{children}</h2>
+    return <h2 className="font-display text-xl md:text-2xl font-bold mb-3 mt-5 first:mt-0 text-road-700 dark:text-road-300">{children}</h2>
   },
   h3({ children }) {
-    return <h3 className="text-xl font-bold mb-3 mt-4 first:mt-0">{children}</h3>
+    return <h3 className="font-display text-lg md:text-xl font-bold mb-3 mt-4 first:mt-0">{children}</h3>
   },
   h4({ children }) {
-    return <h4 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h4>
+    return <h4 className="font-display text-base md:text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h4>
   },
   a({ children, href }) {
     return (
@@ -129,7 +129,7 @@ const createMarkdownComponents = (theme) => ({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-orange-600 dark:text-amber-400 hover:underline"
+        className="text-roots-600 dark:text-road-400 hover:underline"
       >
         {children}
       </a>
@@ -163,8 +163,8 @@ export const Message = memo(function Message({ message }) {
       <div
         className={`max-w-full md:max-w-3xl min-w-0 break-words ${
           message.role === 'user'
-            ? 'bg-gradient-message-user text-white rounded-2xl md:rounded-[2rem] px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 shadow-xl hover:shadow-2xl transition-all'
-            : 'bg-message-assistant backdrop-blur-xl border border-border-primary rounded-2xl md:rounded-[2rem] px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 shadow-lg hover:shadow-xl transition-all'
+            ? 'bg-gradient-message-user text-cream rounded-[1.5rem] rounded-br-md px-4 sm:px-5 md:px-6 py-3 md:py-3.5 shadow-glow-roots'
+            : 'bg-message-assistant backdrop-blur-xl border border-border-primary/80 rounded-[1.5rem] rounded-bl-md px-4 sm:px-6 md:px-7 py-4 sm:py-5 shadow-paper'
         }`}
       >
         {/* File indicator for user messages */}
@@ -187,7 +187,7 @@ export const Message = memo(function Message({ message }) {
               className="flex items-center space-x-2 text-text-secondary hover:text-text-primary transition-colors w-full group"
               aria-expanded={showReasoning}
             >
-              <Brain className="w-4 h-4 text-orange-500 dark:text-amber-400" />
+              <Brain className="w-4 h-4 text-roots-500 dark:text-road-400" />
               <span className="text-sm font-medium">
                 {message.isStreaming && !message.content ? '正在思考…' : '思考过程'}
               </span>
@@ -198,7 +198,7 @@ export const Message = memo(function Message({ message }) {
               )}
             </button>
             {showReasoning && (
-              <div className="mt-3 p-4 bg-orange-50/50 dark:bg-amber-900/10 rounded-xl border border-orange-200/50 dark:border-amber-400/20 animate-fadeIn">
+              <div className="mt-3 p-4 bg-roots-50/50 dark:bg-road-900/10 rounded-xl border border-roots-200/50 dark:border-road-400/20 animate-fadeIn">
                 <div className="text-sm text-text-secondary italic leading-relaxed whitespace-pre-wrap">
                   {message.reasoning}
                 </div>
