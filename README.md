@@ -229,6 +229,18 @@ alembic revision --autogenerate -m "describe the change"
 
 Review the generated file before committing it.
 
+### Dependencies
+
+`backend/requirements.txt` lists direct dependencies with minimum versions;
+`backend/requirements.lock` pins every package and is what Docker and CI
+install. After editing `requirements.txt`, regenerate the lock with
+[uv](https://docs.astral.sh/uv/):
+
+```bash
+cd backend
+uv pip compile requirements.txt --universal --python-version 3.12 -o requirements.lock
+```
+
 ## Project Structure
 
 ```
@@ -335,7 +347,7 @@ service (no API keys or network calls required).
 
 ```bash
 cd backend
-pip install -r requirements.txt pytest pytest-asyncio
+pip install -r requirements.lock pytest pytest-asyncio
 python -m pytest -v
 ```
 
