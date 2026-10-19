@@ -71,3 +71,19 @@ describe('chatAPI.streamChat', () => {
     await expect(chatAPI.streamChat(1, 'hi', () => {})).rejects.toThrow('500')
   })
 })
+
+describe('chatAPI.streamChat cancellation and legacy errors', () => {
+  it('treats an untyped {error} event as an error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamResponse([event({ error: 'not configured' })])))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(chatAPI.streamChat(1, 'hi', () => {})).rejects.toThrow('not configured')
+  })
+
+  it('passes the abort signal to fetch', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(streamResponse([]))
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+    await chatAPI.streamChat(1, 'hi', () => {}, [], null, null, null, { signal: controller.signal })
+    expect(fetchMock.mock.calls[0][1].signal).toBe(controller.signal)
+  })
+})

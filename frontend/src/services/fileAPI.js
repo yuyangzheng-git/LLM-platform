@@ -10,7 +10,7 @@ export const fileAPI = {
   /**
    * Upload a single file
    */
-  upload: async (file, messageId = null) => {
+  upload: async (file, messageId = null, onProgress = null) => {
     const formData = new FormData()
     formData.append('file', file)
     if (messageId) {
@@ -23,6 +23,11 @@ export const fileAPI = {
       {
         headers: {
           'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total))
+          }
         },
       }
     )

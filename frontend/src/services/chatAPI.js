@@ -10,8 +10,9 @@ export const chatAPI = {
    * @param {function} onReasoning - Optional callback for reasoning chunks
    * @param {function} onToolCall - Optional callback for tool call events
    * @param {function} onToolResult - Optional callback for tool result events
+   * @param {object} options - { signal } AbortSignal to cancel the request
    */
-  streamChat: async (conversationId, message, onChunk, fileIds = [], onReasoning = null, onToolCall = null, onToolResult = null) => {
+  streamChat: async (conversationId, message, onChunk, fileIds = [], onReasoning = null, onToolCall = null, onToolResult = null, { signal } = {}) => {
     // 生产环境：空字符串（通过 Nginx 代理）
     // 开发环境：http://localhost:3211
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
@@ -30,6 +31,7 @@ export const chatAPI = {
           file_ids: fileIds,
           stream: true,
         }),
+        signal,
       })
 
       if (!response.ok) {
@@ -58,7 +60,7 @@ export const chatAPI = {
         }
 
         // Server-side failure: surface it instead of silently stopping
-        if (parsed.type === 'error') {
+        if (parsed.type === 'error' || (parsed.error && !parsed.type)) {
           throw new Error(parsed.error || 'Stream error')
         }
         // Handle tool call events
@@ -110,7 +112,9 @@ export const chatAPI = {
         }
       }
     } catch (error) {
-      console.error('Stream chat error:', error)
+      if (error.name !== 'AbortError') {
+        console.error('Stream chat error:', error)
+      }
       throw error
     }
   },

@@ -1,34 +1,72 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useLayoutEffect, useState } from 'react'
 import { Message } from './Message'
 import { ChatInput } from './ChatInput'
 import { WelcomeScreen } from './WelcomeScreen'
-import { TypingIndicator } from './TypingIndicator'
-import ToolCallDisplay from './ToolCallDisplay'
-import { Upload } from 'lucide-react'
+import { ArrowDown, Upload } from 'lucide-react'
+
+// How close to the bottom (px) still counts as "following" new output
+const STICK_THRESHOLD = 80
 
 export function MainChatArea({
   messages = [],
+  conversationId,
   inputMessage,
   onInputChange,
   onSendMessage,
-  isLoading = false,
-  selectedFiles = [],
+  onStop,
+  isSending = false,
+  canSend = false,
+  attachments = [],
   onFileSelect,
-  onRemoveFile,
-  isUploading = false,
-  uploadProgress = 0,
+  onRemoveAttachment,
   isStarted = false,
   selectedModel,
   onModelChange,
-  currentToolCalls = [],
+  modelLocked = false,
 }) {
-  const messagesEndRef = useRef(null)
+  const scrollRef = useRef(null)
+  const stickToBottomRef = useRef(true)
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  const lastConversationRef = useRef(conversationId)
+
+  // Follow new output only while the user is at the bottom; scrolling up
+  // to read earlier messages is never interrupted. Opening another
+  // conversation always starts at its latest message.
+  useLayoutEffect(() => {
+    if (lastConversationRef.current !== conversationId) {
+      lastConversationRef.current = conversationId
+      stickToBottomRef.current = true
+      setShowJumpToLatest(false)
+    }
+    const el = scrollRef.current
+    if (el && stickToBottomRef.current) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [messages, isStarted, conversationId])
+
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_THRESHOLD
+    stickToBottomRef.current = atBottom
+    setShowJumpToLatest(!atBottom)
+  }
+
+  const jumpToLatest = () => {
+    const el = scrollRef.current
+    if (!el) return
+    stickToBottomRef.current = true
+    setShowJumpToLatest(false)
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }
+
+  const handleSend = () => {
+    // Sending always brings the new exchange into view
+    stickToBottomRef.current = true
+    onSendMessage()
+  }
 
   // Drag and drop handlers
   const handleDragOver = (e) => {
@@ -41,7 +79,7 @@ export function MainChatArea({
     e.preventDefault()
     e.stopPropagation()
     // Only set to false if we're leaving the main container
-    if (e.currentTarget === e.target) {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
       setIsDragging(false)
     }
   }
@@ -53,15 +91,26 @@ export function MainChatArea({
 
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
-      // Create a synthetic event to match the expected file input format
-      const syntheticEvent = {
-        target: {
-          files: files
-        }
-      }
-      onFileSelect(syntheticEvent)
+      onFileSelect({ target: { files } })
     }
   }
+
+  const chatInput = (
+    <ChatInput
+      value={inputMessage}
+      onChange={onInputChange}
+      onSend={handleSend}
+      onStop={onStop}
+      isSending={isSending}
+      canSend={canSend}
+      attachments={attachments}
+      onFileSelect={onFileSelect}
+      onRemoveAttachment={onRemoveAttachment}
+      selectedModel={selectedModel}
+      onModelChange={onModelChange}
+      modelLocked={modelLocked}
+    />
+  )
 
   return (
     <div
@@ -72,7 +121,7 @@ export function MainChatArea({
     >
       {/* Drag overlay */}
       {isDragging && (
-        <div className="absolute inset-0 bg-orange-500/10 dark:bg-amber-500/10 backdrop-blur-sm border-4 border-dashed border-orange-400 dark:border-amber-400 rounded-2xl z-50 flex items-center justify-center animate-fadeIn">
+        <div className="absolute inset-0 bg-orange-500/10 dark:bg-amber-500/10 backdrop-blur-sm border-4 border-dashed border-orange-400 dark:border-amber-400 rounded-2xl z-50 flex items-center justify-center animate-fadeIn pointer-events-none">
           <div className="text-center">
             <Upload className="w-16 h-16 mx-auto mb-4 text-orange-500 dark:text-amber-400 animate-bounce" />
             <p className="text-xl font-bold text-orange-600 dark:text-amber-400">拖放文件到这里上传</p>
@@ -86,61 +135,39 @@ export function MainChatArea({
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8">
           <div className="w-full max-w-3xl">
             <WelcomeScreen />
-            <ChatInput
-              value={inputMessage}
-              onChange={onInputChange}
-              onSend={onSendMessage}
-              disabled={isLoading}
-              selectedFiles={selectedFiles}
-              onFileSelect={onFileSelect}
-              onRemoveFile={onRemoveFile}
-              isUploading={isUploading}
-              uploadProgress={uploadProgress}
-              selectedModel={selectedModel}
-              onModelChange={onModelChange}
-            />
+            {chatInput}
           </div>
         </div>
       ) : (
         <>
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6"
+          >
             <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-              {messages.map((msg, index) => (
-                <Message key={msg.id || index} message={msg} index={index} />
+              {messages.map((msg) => (
+                <Message key={msg.key} message={msg} />
               ))}
-
-              {/* Show current tool calls if loading and there are tool calls */}
-              {isLoading && currentToolCalls.length > 0 && (
-                <div className="flex justify-start animate-fadeIn">
-                  <div className="max-w-3xl break-words bg-message-assistant backdrop-blur-xl border border-border-primary rounded-2xl md:rounded-[2rem] px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 shadow-lg">
-                    <ToolCallDisplay toolCalls={currentToolCalls} />
-                  </div>
-                </div>
-              )}
-
-              {isLoading && <TypingIndicator />}
-              <div ref={messagesEndRef} />
             </div>
           </div>
 
+          {showJumpToLatest && (
+            <div className="relative">
+              <button
+                onClick={jumpToLatest}
+                className="absolute left-1/2 -translate-x-1/2 -top-14 z-10 flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/90 dark:bg-bg-secondary/90 border border-border-primary shadow-lg text-sm text-text-primary hover:shadow-xl animate-fadeIn"
+              >
+                <ArrowDown className="w-4 h-4" />
+                <span>回到最新</span>
+              </button>
+            </div>
+          )}
+
           {/* Input Area - Fixed at bottom */}
           <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 lg:px-8 py-3 md:py-4 lg:py-6 bg-bg-secondary/50 dark:bg-bg-secondary/30 border-t border-border-primary">
-            <div className="max-w-4xl mx-auto">
-              <ChatInput
-                value={inputMessage}
-                onChange={onInputChange}
-                onSend={onSendMessage}
-                disabled={isLoading}
-                selectedFiles={selectedFiles}
-                onFileSelect={onFileSelect}
-                onRemoveFile={onRemoveFile}
-                isUploading={isUploading}
-                uploadProgress={uploadProgress}
-                selectedModel={selectedModel}
-                onModelChange={onModelChange}
-              />
-            </div>
+            <div className="max-w-4xl mx-auto">{chatInput}</div>
           </div>
         </>
       )}

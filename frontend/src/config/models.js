@@ -13,3 +13,8 @@ export const TOP_MODELS = [
   // === 其他顶级模型 ===
   { id: 'grok-4.1', name: 'Grok 4.1', provider: 'xAI' },
 ]
+
+// Friendly name for a model id; falls back to the id for models not listed
+export function modelDisplayName(modelId) {
+  return TOP_MODELS.find((m) => m.id === modelId)?.name || modelId
+}
