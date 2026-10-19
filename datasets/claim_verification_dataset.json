@@ -1,6 +1,6 @@
 {
   "dataset": "claim_verification_dataset",
-  "description": "Ten factual claims with labels and reference URLs for the tool-augmented vs tool-free verification study (see docs/demo-claim-verification.md).",
+  "description": "Ten factual claims with labels and reference URLs for the tool-augmented vs tool-free verification study (see the 'Research use: claim verification' section of README.md).",
   "claims": [
     {
       "id": 1,
