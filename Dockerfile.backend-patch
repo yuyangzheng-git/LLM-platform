@@ -1,0 +1,3 @@
+FROM llm-chat-platform-backend:latest
+COPY backend/app/services/llm/openai_service.py /app/app/services/llm/openai_service.py
+COPY backend/app/services/llm/generic_service.py /app/app/services/llm/generic_service.py

@@ -47,6 +47,10 @@ class GenericOpenAIService(BaseLLMService):
             tool_calls_buffer = {}
 
             async for chunk in stream:
+                # OpenAI-compatible providers may send chunks containing
+                # only usage/metadata and no choices at stream completion.
+                if not getattr(chunk, "choices", None):
+                    continue
                 delta = chunk.choices[0].delta
 
                 # Handle tool calls
@@ -77,7 +81,7 @@ class GenericOpenAIService(BaseLLMService):
 
                 # Check for reasoning content (DeepSeek reasoner, O1-like models)
                 has_reasoning = hasattr(delta, 'reasoning_content') and delta.reasoning_content
-                has_content = delta.content
+                has_content = bool(delta.content)
 
                 if has_reasoning or has_content:
                     yield {
