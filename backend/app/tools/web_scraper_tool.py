@@ -10,10 +10,47 @@ import logging
 from urllib.parse import urljoin, urlparse
 import re
 
+from app.utils.url_guard import UnsafeURLError, assert_public_url
+
 logger = logging.getLogger(__name__)
 
 # 请求头
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+MAX_REDIRECTS = 5
+MAX_RESPONSE_BYTES = 5 * 1024 * 1024  # 5MB
+
+
+async def _fetch_public(client: httpx.AsyncClient, url: str, headers: Dict[str, str]):
+    """
+    GET a URL, following redirects manually so every hop is checked
+    against the SSRF guard, and stop reading after MAX_RESPONSE_BYTES.
+
+    Returns (response, body_text).
+    """
+    for _ in range(MAX_REDIRECTS + 1):
+        await assert_public_url(url)
+        async with client.stream("GET", url, headers=headers) as response:
+            if response.is_redirect:
+                location = response.headers.get("location")
+                if not location:
+                    response.raise_for_status()
+                url = urljoin(str(response.url), location)
+                continue
+
+            response.raise_for_status()
+            chunks = []
+            size = 0
+            async for chunk in response.aiter_bytes():
+                size += len(chunk)
+                if size > MAX_RESPONSE_BYTES:
+                    break
+                chunks.append(chunk)
+            body = b"".join(chunks)
+            encoding = response.encoding or "utf-8"
+            return response, body.decode(encoding, errors="replace")
+
+    raise UnsafeURLError("重定向次数过多")
 
 async def analyze_website(url: str, max_content_length: int = 5000) -> Dict[str, Any]:
     """
@@ -51,9 +88,8 @@ async def analyze_website(url: str, max_content_length: int = 5000) -> Dict[str,
             "Connection": "keep-alive",
         }
 
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
+            response, response_text = await _fetch_public(client, url, headers)
 
         # 检查内容类型
         content_type = response.headers.get('content-type', '').lower()
@@ -65,7 +101,7 @@ async def analyze_website(url: str, max_content_length: int = 5000) -> Dict[str,
             }
 
         # 解析HTML
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response_text, 'html.parser')
 
         # 移除脚本和样式标签
         for script in soup(["script", "style", "nav", "footer", "header"]):
@@ -182,6 +218,13 @@ async def analyze_website(url: str, max_content_length: int = 5000) -> Dict[str,
         logger.info(f"✅ 网站分析成功: {url} (标题: {title})")
         return result
 
+    except UnsafeURLError as e:
+        logger.warning(f"拒绝访问URL: {url} - {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "url": url
+        }
     except httpx.TimeoutException:
         logger.error(f"❌ 网站分析超时: {url}")
         return {
@@ -197,10 +240,10 @@ async def analyze_website(url: str, max_content_length: int = 5000) -> Dict[str,
             "url": url
         }
     except Exception as e:
-        logger.error(f"❌ 网站分析失败: {url} - {str(e)}")
+        logger.exception(f"❌ 网站分析失败: {url}")
         return {
             "success": False,
-            "error": f"分析失败: {str(e)}",
+            "error": "分析失败，无法读取该网页",
             "url": url
         }
 
