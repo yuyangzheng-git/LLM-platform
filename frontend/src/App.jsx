@@ -30,7 +30,7 @@ function App() {
             {/* Logo */}
             <div className="flex items-center space-x-3">
               <div className="text-2xl font-black bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 dark:from-amber-400 dark:via-orange-400 dark:to-rose-400 bg-clip-text text-transparent">
-                Zachary's LLM
+                Zachary&apos;s LLM
               </div>
             </div>
 

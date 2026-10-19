@@ -1,10 +1,5 @@
-import { createContext, useState, useEffect } from 'react'
-
-export const ThemeContext = createContext({
-  theme: 'light',
-  toggleTheme: () => {},
-  setTheme: () => {},
-})
+import { useState, useEffect } from 'react'
+import { ThemeContext } from './themeContext'
 
 export function ThemeProvider({ children }) {
   // Initialize theme from localStorage or system preference
